@@ -1852,12 +1852,10 @@ function ImportText(){
       console.log(data);
       var len=0;
       if(data[145]==0xf7) len=146;
-      if(data[104]==0xf7) {
-        len=105;
-        data=slice(0,105);
-      }
-      console.log(data);
+      if(data[104]==0xf7) len=105;
       if(len){
+        data=data.slice(0,len);
+        console.log(data);
         ReadPatch(data);
         document.getElementById("textareabase").style.display="none";
         return;
