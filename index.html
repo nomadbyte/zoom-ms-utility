@@ -1126,7 +1126,7 @@ function PopupEdit(f,p,par){
       for(let i=0;i<par.disp.length;++i){
         var e=panel.childNodes[0].childNodes[i*2];
         e.onclick=()=>{
-          SetParamVal(currentpatch,f-1,p+1,i);
+          SetParamVal(currentpatch,f-1,p+1,(typeof(par.max)=="object"?par.max[i]:i));
           DispPatch(currentpatch);
           panel.style.display="none";
         };
