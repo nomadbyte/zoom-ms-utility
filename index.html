@@ -15,7 +15,7 @@
 // Zoom MS-50G / 60B / 70CDR
 //
 // MIDI commands
-//  These commands are inferred by irresponsible experiment and not garanteed.
+//  These commands are inferred by irresponsible experiment and not guaranteed.
 //
 //  ProgramChange : [0xc0,pp]
 //     Select patch by MIDI Program Change pp=patch number (0-49)
@@ -249,7 +249,7 @@ function MidiIf(ma){
           }
         }
         ++this.scan;
-        if(this.scan>49){
+        if(this.scan>=50){
           this.scan=-1;
           this.ready=1;
           midiif.Send([0xc0,currentpatch]);
@@ -413,7 +413,7 @@ function MidiIf(ma){
       }
     }
     if(id!=0&&id!=instanceid){
-      AlertMsg("Another Patch Editor is launched.<br/> This instance is no more effective. <br/>Reload?",function(){
+      AlertMsg("Another Patch Editor is running.<br/> This instance is no longer effective. <br/>Reload?",function(){
         window.location.href=url;
       });
       abort=true;
@@ -484,7 +484,7 @@ function MidiIf(ma){
   this.PortScan();
   this.SelectPort();
   if(!this.midiout)
-    AlertMsg("<br/>MIDI port is not found.<br/>Retry after connect ZOOM MS device.");
+    AlertMsg("<br/>MIDI port is not found.<br/>Retry after connecting ZOOM MS device.");
   this.timerid=setInterval(this.timer.bind(this),80);
 }
 
@@ -1781,7 +1781,7 @@ function ReadPatch(data){
   SelectPatch(currentpatch);
   midiif.SendCurrentPatchVerify(function(s){
     if(s)
-      AlertMsg("Following effect(s) are not exist<br/>"+s);
+      AlertMsg("The following effect(s) are not installed:<br/>"+s);
     console.log(s);
   });
   if(autosave)
@@ -1923,7 +1923,7 @@ function ImportText(){
       SelectPatch(currentpatch);
       midiif.SendCurrentPatchVerify(function(s){
         if(s)
-          AlertMsg("Following effect(s) are not exist<br/>"+s);
+          AlertMsg("The following effect(s) are not installed:<br/>"+s);
         console.log(s);
       });
       if(autosave)
@@ -2897,7 +2897,7 @@ webaudio-switch{
       <br/>
       <img src="./images/g200kg160x80.png" style="margin:0px 10px"/> <img src="./images/50g.png" style="width:45px;margin:0px 10px"/> <img src="./images/60b.png" style="width:45px;margin:0px 10px"/> <img src="./images/70cdr.png" style="width:45px;margin:0px 10px"/><br/>
       <p>This is a browser based ZOOM MS-50G / 60B / 70CDR patch editor<br/>
-      Launch this page with latest Chrome after connect ZOOM MS-50G / 60B / 70CDR via USB.</p>
+      Launch this page with latest Chrome after connecting ZOOM MS-50G / 60B / 70CDR via USB.</p>
       <p>これはブラウザで動作する ZOOM MS-50G / 60B / 70CDR 用のパッチエディタです<br/>
         ZOOM MS-50G / 60B / 70CDR を USB で接続した後、このページを起動してください。</p>
       <hr style="clear:both"/>
@@ -3000,7 +3000,7 @@ webaudio-switch{
               <ul>
                 <li>Keyboard Left/Right is assigned to patch Down/Up, 'a'-'t':patch1-patch20, 'A'-'T':patch21-patch40 '1'-'9','0':patch41-patch50</li>
                 <li>Keyboard 'F1'-'F6' is assigned to On/Off each effect.</li>
-                <li>Keybeard 'F9' is assigned to Tuner mode On/Off.</li>
+                <li>Keyboard 'F9' is assigned to Tuner mode On/Off.</li>
               </ul>
             </li>
             <li>Usage in online / offline environment<br/>
