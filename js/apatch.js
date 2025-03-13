@@ -8,6 +8,7 @@ function apatch(){
     [0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0],
   ];
+  this.bpm=120;
   this.maxfx=1;
   this.curfx=0;
   this.dspstate=0;
@@ -17,6 +18,7 @@ apatch.prototype.CopyFrom=function(a){
   for(var i=0;i<6;++i)
     for(var j=0;j<11;++j)
       this.fx[i][j]=a.fx[i][j];
+  this.bpm=a.bpm;
   this.maxfx=a.maxfx;
   this.curfx=a.curfx;
   this.dspstate=0;
@@ -119,12 +121,25 @@ apatch.prototype.bits=[
     [[127,0x7f,0],[125,0x20,2]],
   ]
 ];
+apatch.prototype.dspstatebits=[
+  [[88,0x3f,0]],
+  [[129,0x3f,0]],
+];
+apatch.prototype.curfxbits=[
+  [[88,0x40,-6],[85,0x10,-3],[89,0x03,2]],
+  [[129,0x40,-6],[125,0x08,-2],[130,0x03,2]],
+];
+apatch.prototype.maxfxbits=[
+  [[89,0x1c,-2]],
+  [[130,0x1c,-2]],
+];
+apatch.prototype.bpmbits=[
+  [[89,0x60,-5],[85,0x08,-1],[90,0x1f,3]],
+  [[130,0x60,-5],[125,0x04,0],[131,0x1f,3]]
+];
 apatch.prototype.namidx=[
   [91,92,94,95,96,97,98,99,100,102],
   [132,134,135,136,137,138,139,140,142,143]
-];
-apatch.prototype.maxfxidx=[
-  89,130,
 ];
 apatch.prototype.GetParamVal=function(n,p){
   return this.fx[n][p];
@@ -142,34 +157,41 @@ apatch.prototype.GetDspState=function(n){
   return (this.dspstate>>n)&1;
 }
 apatch.prototype.GetCurFxBit=function(dat){
-  if(dat.length<146)
-    return 3-(((dat[88]&0x40)>>6)+((dat[85]&0x10)>>3));
-  else
-    return 6-(((dat[130]&1)<<2)+((dat[125]&8)>>2)+((dat[129]&0x40)>>6));
+  var bits=(dat.length<146?this.curfxbits[0]:this.curfxbits[1]);
+  var val=(dat.length<146?4:6)-this.GetBits(dat,bits)-1
+  return (val<0?0:val);
 };
 apatch.prototype.SetCurFxBit=function(dat,n){
-  if(dat.length<146){
-    n=3-n;
-    dat[88]=(dat[88]&~0x40)+((n&1)<<6);
-    dat[85]=(dat[85]&~0x10)+((n&2)<<3);
-  }
-  else{
-    n=5-n;
-    dat[129]=(dat[129]&~0x40)+((n&1)<<6);
-    dat[125]=(dat[125]&~0x8)+((n&2)<<2);
-    dat[130]=(dat[130]&~1)+((n&4)>>2);
-  }
+  var bits=(dat.length<146?this.curfxbits[0]:this.curfxbits[1]);
+  var val=(dat.length<146?4:6)-n-1;
+  this.SetBits(dat,bits,(val>5?5:val));
 }
-apatch.prototype.SetMaxFxBit=function(dat,n){
-  var len=dat.length;
-  var o=this.maxfxidx[len>=146?1:0];
-  if(n==0) n=1;
-  if(n>6) n=6;
-  if(len<146 && n>4) n=4;
-  dat[o]=(dat[o]&~0x1c)+(n<<2);
-};
 apatch.prototype.GetMaxFxBit=function(dat){
-  return (dat[this.maxfxidx[dat.length>=146?1:0]]&0x1c)>>2;
+  var bits=(dat.length<146?this.maxfxbits[0]:this.maxfxbits[1]);
+  var val=this.GetBits(dat,bits);
+  return (val>6?6:val);
+};
+apatch.prototype.SetMaxFxBit=function(dat,n){
+  var bits=(dat.length<146?this.maxfxbits[0]:this.maxfxbits[1]);
+  this.SetBits(dat,bits,Math.min((dat.length<146)?4:6,Math.max(1,n)));
+};
+apatch.prototype.SetDspStateBit=function(dat,val){
+  var bits=(dat.length<146?this.dspstatebits[0]:this.dspstatebits[1]);
+  this.SetBits(dat,bits,(val<=0?0:(val>0x3f?0x3f:val)));
+};
+apatch.prototype.GetDspStateBit=function(dat){
+  var bits=(dat.length<146?this.dspstatebits[0]:this.dspstatebits[1]);
+  var val=this.GetBits(dat,bits);
+  return (val>0?val:0);
+};
+apatch.prototype.SetBpmBit=function(dat,val){
+  var bits=(dat.length<146?this.bpmbits[0]:this.bpmbits[1]);
+  this.SetBits(dat,bits,(val<=0?120:(val>255?255:val)));
+};
+apatch.prototype.GetBpmBit=function(dat){
+  var bits=(dat.length<146?this.bpmbits[0]:this.bpmbits[1]);
+  var val=this.GetBits(dat,bits);
+  return (val>0?val:120);
 };
 apatch.prototype.SetBits=(dat,bits,val)=>{
   var len=dat.length;
@@ -228,9 +250,11 @@ apatch.prototype.ReadBin=function(dat){
         this.fx[f][p]=this.GetBits(dat,this.bits[f][p]);
     }
   }
+  this.bpm=this.GetBpmBit(dat);
   this.maxfx=this.GetMaxFxBit(dat);
   this.curfx=this.GetCurFxBit(dat);
-  this.dspstate=dat[(len>=146)?129:88]&0x3f;
+  this.dspstate=this.GetDspStateBit(dat)
+//  console.log("ReadBin: patch:'"+this.name+"' maxfx:"+this.maxfx+" curfx:"+this.curfx+" bpm:"+this.bpm+" dspstate:0x"+this.dspstate.toString(16));
 };
 apatch.prototype.MakeBin=function(id,effectlistlocal){
   var i,r,flen;
@@ -268,6 +292,9 @@ apatch.prototype.MakeBin=function(id,effectlistlocal){
   }
   this.SetMaxFxBit(r,i+1);
   this.SetCurFxBit(r,this.curfx);
+  this.SetBpmBit(r,this.bpm);
+  this.SetDspStateBit(r,this.dspstate);
+//  console.log("MakeBin: patch:'"+this.name+"' curfx:"+this.curfx+" bpm:"+this.bpm+" dspstate:0x"+this.dspstate.toString(16));
   return r;
 };
 var nullpatch=new apatch();
