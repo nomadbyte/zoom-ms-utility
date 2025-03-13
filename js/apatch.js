@@ -1,4 +1,5 @@
 function apatch(){
+  this.devid=0x00;
   this.name="";
   this.fx=[
     [0,0,0,0,0,0,0,0,0,0,0],
@@ -14,6 +15,7 @@ function apatch(){
   this.dspstate=0;
 }
 apatch.prototype.CopyFrom=function(a){
+  this.devid=a.devid;
   this.name=a.name.slice(0);
   for(var i=0;i<6;++i)
     for(var j=0;j<11;++j)
@@ -41,6 +43,11 @@ apatch.prototype.empty105=[
   0x00,0x00,0x00,0x00,0x00,0x10,0x00,0x00,0x40,0x04,0x0f,0x45,0x6d,0x00,0x70,0x74,0x79,0x20,0x20,0x20,
   0x20,0x00,0x20,0x00,0xf7
 ];
+apatch.prototype.SetEmpty=function(devid){
+  if(typeof(devid)=="undefined") devid=this.devid;
+  this.ReadBin(devid==0x5f?this.empty105:this.empty146);
+  this.devid=devid;
+}
 apatch.prototype.bits=[
   [ //eff0
     [[6,1,0]],  //State
@@ -233,6 +240,7 @@ apatch.prototype.GetBits=(dat,bits)=>{
   return val;
 };
 apatch.prototype.ReadBin=function(dat){
+  this.devid=dat[3];
   var len=dat.length;
   var name="";
   for(var j=0;j<13;++j){
@@ -254,7 +262,7 @@ apatch.prototype.ReadBin=function(dat){
   this.maxfx=this.GetMaxFxBit(dat);
   this.curfx=this.GetCurFxBit(dat);
   this.dspstate=this.GetDspStateBit(dat)
-//  console.log("ReadBin: patch:'"+this.name+"' maxfx:"+this.maxfx+" curfx:"+this.curfx+" bpm:"+this.bpm+" dspstate:0x"+this.dspstate.toString(16));
+//  console.log("ReadBin:(devid:0x"+this.devid.toString(16)+") patch:'"+this.name+"' maxfx:"+this.maxfx+" curfx:"+this.curfx+" bpm:"+this.bpm+" dspstate:0x"+this.dspstate.toString(16));
 };
 apatch.prototype.MakeBin=function(id,effectlistlocal){
   var i,r,flen;
@@ -294,7 +302,7 @@ apatch.prototype.MakeBin=function(id,effectlistlocal){
   this.SetCurFxBit(r,this.curfx);
   this.SetBpmBit(r,this.bpm);
   this.SetDspStateBit(r,this.dspstate);
-//  console.log("MakeBin: patch:'"+this.name+"' curfx:"+this.curfx+" bpm:"+this.bpm+" dspstate:0x"+this.dspstate.toString(16));
+//  console.log("MakeBin:(devid:0x"+this.devid.toString(16)+") patch:'"+this.name+"' curfx:"+this.curfx+" bpm:"+this.bpm+" dspstate:0x"+this.dspstate.toString(16));
   return r;
 };
 var nullpatch=new apatch();

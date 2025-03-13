@@ -1054,9 +1054,7 @@ function PopupPatchDelete(){
         SetParamVal(currentpatch,i,j,0);
       }
     }
-    patches[currentpatch].maxfx=1;
-    patches[currentpatch].curfx=0;
-    patches[currentpatch].name="Empty";
+    patches[currentpatch].SetEmpty(midiif.devid);
     midiif.Send(patches[currentpatch].MakeBin(midiif.devid));
     midiif.RequestPatch();
     DispPatchName(currentpatch);
