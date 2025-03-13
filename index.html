@@ -88,7 +88,7 @@ function MidiIf(ma){
   this.midiout=null;
   this.devid=0x58;
   this.version=3;
-  this.devstr="50g";
+  this.devstr="50G";
   this.sysexhead="f0520058";
   this.que=[];
   this.scan=-1;
@@ -163,29 +163,27 @@ function MidiIf(ma){
       switch(this.devid=ev.data[6]){
       case 0x58:
         this.sysexhead="f0520058";
-        this.devstr="50g";
-        this.instSet();
-        document.getElementById("device").innerHTML="MS-50G";
-        document.getElementById("effects").rows[4].style.display="";
-        document.getElementById("effects").rows[5].style.display="";
+        this.devstr="50G";
         break;
       case 0x5f:
         this.sysexhead="f052005f";
-        this.devstr="60b";
-        this.instSet();
-        document.getElementById("device").innerHTML="MS-60B";
-        document.getElementById("effects").rows[4].style.display="none";
-        document.getElementById("effects").rows[5].style.display="none";
+        this.devstr="60B";
         break;
       case 0x61:
         this.sysexhead="f0520061";
-        this.devstr="70cdr";
-        this.instSet();
-        document.getElementById("device").innerHTML="MS-70CDR";
-        document.getElementById("effects").rows[4].style.display="";
-        document.getElementById("effects").rows[5].style.display="";
+        this.devstr="70CDR";
         break;
+      default:
+        AlertMsg("<br/>Unsupported ZOOM device (0x"+this.devid.toString(16)+").<br/>Please connect MS-50G / 60B / 70CDR via USB.<br/> Reload?",function(){
+          window.location.href=url;
+        });
+        abort=true;
+        return;
       }
+      this.instSet();
+      document.getElementById("device").innerHTML="MS-"+this.devstr;
+      document.getElementById("effects").rows[4].style.display=(this.devid==0x5f?"none":"");
+      document.getElementById("effects").rows[5].style.display=(this.devid==0x5f?"none":"");
       for(var id in effectlist){
         var ef=effectlist[id];
         if(ef.group=="AMP"){
@@ -287,6 +285,10 @@ function MidiIf(ma){
         }
       }
     }
+  };
+  this.ConvertDevPatch=function(devpatch){
+    devpatch.devid=this.devid;
+    return devpatch;
   };
   this.StartScan=function(){
     console.log("StartScan")
@@ -1571,14 +1573,14 @@ function SaveBank(){
   var zip=new JSZip();
   for(p=0;p<50;++p){
     var s=MakeStr(patches[p].MakeBin(midiif.devid))+"\r\n";
-    var n=("0"+(p+1)).substr(-2)+"@"+(patches[p].name.replace(/ +/g,"").replace(/ /g,"_"))+"."+midiif.devstr;
+    var n=("0"+(p+1)).substr(-2)+"@"+(patches[p].name.replace(/ +/g,"").replace(/ /g,"_"))+"."+midiif.devstr.toLowerCase();
     zip.file(n,s);
   }
   zip.generateAsync({type:"blob"}).then(function (blob) {
     var a=document.createElement("a");
     a.href=URL.createObjectURL(blob);
     a.target="_blank";
-    a.download="newbank."+midiif.devstr+".zip";
+    a.download="newbank."+midiif.devstr.toLowerCase()+".zip";
     a.click();
   });
 }
@@ -1689,26 +1691,32 @@ function ExportPatch(){
   var a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
   a.target="_blank";
-  a.download=fname+"."+midiif.devstr;
+  a.download=fname+"."+midiif.devstr.toLowerCase();
   a.click();
 }
-function ReadPatch(data){
-  if(data[3]!=midiif.devid){
+function ReadDevPatch(data){
+  var devid=parseInt(data[3]);
+  if(devid!=midiif.devid){
     Confirm("This patch is not for MS-"+midiif.devstr+".<br/> Load anyway ?",function(ev){
-      data[3]=midiif.devid;
       ev.target.parentNode.parentNode.style.display="none";
       ReadPatch(data);
     });
     return;
   }
-  patches[currentpatch].ReadBin(data);
+  ReadPatch(data);
+}
+function ReadPatch(data){
+  var devpatch=new apatch();
+  devpatch.ReadBin(data);
+  patches[currentpatch].CopyFrom(midiif.ConvertDevPatch(devpatch));
   DispPatchName(currentpatch);
   DispPatch(currentpatch);
   SelectPatch(currentpatch);
   midiif.SendCurrentPatchVerify(function(s){
-    if(s)
+    if(s){
       AlertMsg("The following effect(s) are not installed:<br/>"+s);
-    console.log(s);
+      console.log("Not installed:"+s);
+    }
   });
   if(autosave)
     StorePatch(currentpatch);
@@ -1742,7 +1750,7 @@ function ImportPatch(){
                 e.innerHTML=name;
                 document.getElementById("patchenumlist").rows[n%10].cells[(n/10)|0].appendChild(e);
                 e.onclick=function(){
-                  ReadPatch(this.data);
+                  ReadDevPatch(this.data);
                   document.getElementById("patchenum").style.display="none";
                 }
               });
@@ -1757,14 +1765,14 @@ function ImportPatch(){
     reader.readAsText(file[0]);
     reader.onload=function(ev){
       var data=MakeBin(reader.result,146);
-      ReadPatch(data);
+      ReadDevPatch(data);
     }
   },false);
 }
 function ImportText(){
   var tar=document.getElementById((currentpatch+1)+"nam");
   var panel=document.getElementById("textareabase");
-  document.getElementById("textareamsg").innerHTML="Load from Text : Paste here the Text from 'Show Patch as text'<br/> or guitarpatches.com's zoom MS-50G patch page texts.";
+  document.getElementById("textareamsg").innerHTML="Import Patch from text : Paste here the Text from 'Show Patch as text'<br/> or Text copied from a ZOOM MS-50G patch page at guitarpatches.com.";
   document.getElementById("textareatext").value="";
   var rc=tar.getBoundingClientRect();
   panel.style.display="block";
@@ -1782,7 +1790,7 @@ function ImportText(){
       if(len){
         data=data.slice(0,len);
         console.log(data);
-        ReadPatch(data);
+        ReadDevPatch(data);
         document.getElementById("textareabase").style.display="none";
         return;
       }
@@ -1846,9 +1854,10 @@ function ImportText(){
       DispPatch(currentpatch);
       SelectPatch(currentpatch);
       midiif.SendCurrentPatchVerify(function(s){
-        if(s)
+        if(s){
           AlertMsg("The following effect(s) are not installed:<br/>"+s);
-        console.log(s);
+          console.log("Not installed:"+s);
+        }
       });
       if(autosave)
         StorePatch(currentpatch);
