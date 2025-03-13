@@ -2246,4 +2246,38 @@ var effectlist={
     {name:"ToneB",def:70,max:200,disp:-100},
   ]},
 }
-if (typeof module === 'object') {module.exports = effectlist;}
+
+var bampcab=[
+  { //ver 1.00
+    max:[
+      0x05000010,0x05000020,0x05000030,0x05000060,0x05000070,0x050000c0,0x00000000
+    ],
+    disp:["AG 8x10","BM 4x12","HA 4x10","AC 1x18","AL 4x10","MB 1x12","OFF"],
+  },
+  { //ver 2.00
+    max:[
+      0x05000010,0x05000020,0x05000030,0x05000060,0x05000070,0x050000c0,0x05100040,0x05100050,0x05100080,0x05100090,
+      0x051000a0,0x051000b0,0x00000000
+    ],
+    disp:["AG 8x10","BM 4x12","HA 4x10","AC 1x18","AL 4x10","MB 1x12","SWR 4x10","AG 1x15","PT 1x15","SB 4x12","GK 4x10","E 4x10","OFF"],
+  },
+];
+var gampcab=[
+  { //ver 1.00
+    max:[
+      0x04000008,0x04000010,0x04000030,0x04000050,0x04000090,0x040000f0,0x04000130,0x04000140,0x00000000
+    ],
+    disp:["FD COMBO 2x12","DLX-R 1x12","US BLUES 4x10","VX JMI 2x12","TW ROCK 1x12","MS 1959 4x12","DZ DRIVE 4x12","ALIEN 4x12","OFF"],
+  },
+  { //ver 3.00
+    max:[
+      0x04000008,0x04000010,0x04000020,0x04000030,0x04000040,0x04000050,0x04000060,0x04000070,0x04000080,0x04000090,
+      0x040000a0,0x040000b0,0x040000c0,0x040000d0,0x040000e0,0x040000f0,0x04000100,0x04000110,0x04000120,0x04000130,
+      0x04000140,0x04000150,0x00000000
+    ],
+    disp:["FD COMBO 2x12","DLX-R 1x12","FD VIBRO 2x10","US BLUES 4x10","VX COMBO 2x12","VX JMI 2x12","BG CRUNCH 1x12","MATCH 30 2x12","CAR DRIVE 1x12","TW ROCK 1x12","TONE CITY 4x12","HW STACK 4x12","TANGERINE 4x12","B-BRKR 2x12","MS CRUNCH 4x12","MS 1959 4x12","MS DRIVE 4x12","BGN DRIVE 4x12","BG DRIVE 4x12","DZ DRIVE 4x12","ALIEN 4x12","REVO-1 4x12","OFF"],
+  }
+];
+
+if (typeof module === 'object') {module.exports = [effectlist,bampcab,gampcab];}
+
