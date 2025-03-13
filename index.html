@@ -199,13 +199,6 @@ function MidiIf(ma){
         document.getElementById("device").innerHTML="MS-50G";
         document.getElementById("effects").rows[4].style.display="";
         document.getElementById("effects").rows[5].style.display="";
-        for(var id in effectlist){
-          var ef=effectlist[id];
-          if(ef.group=="AMP" && (ef.ver&0xf)){
-            ef.param[7].max=gampcab[(v>=3)?1:0].max;
-            ef.param[7].disp=gampcab[(v>=3)?1:0].disp;
-          }
-        }
         break;
       case 0x5f:
         this.sysexhead="f052005f";
@@ -214,13 +207,6 @@ function MidiIf(ma){
         document.getElementById("device").innerHTML="MS-60B";
         document.getElementById("effects").rows[4].style.display="none";
         document.getElementById("effects").rows[5].style.display="none";
-        for(var id in effectlist){
-          var ef=effectlist[id];
-          if(ef.group=="AMP" && (ef.ver&0xf0)){
-            ef.param[7].max=bampcab[(v>=2)?1:0].max;
-            ef.param[7].disp=bampcab[(v>=2)?1:0].disp;
-          }
-        }
         break;
       case 0x61:
         this.sysexhead="f0520061";
@@ -231,6 +217,21 @@ function MidiIf(ma){
         document.getElementById("effects").rows[5].style.display="";
         break;
       }
+      for(var id in effectlist){
+        var ef=effectlist[id];
+        if(ef.group=="AMP"){
+          var ampcab = null;
+          switch((id>>24)&0xff){
+          case 0x04: ampcab=gampcab[(v>=(this.devid==0x58?3:2))?1:0];  // assume comparable age of the fw
+          break;
+          case 0x05: ampcab=bampcab[(v>=(this.devid==0x58?3:2))?1:0];  // assume comparable age of the fw
+          break;
+          }
+          ef.param[7].max=ampcab.max;
+          ef.param[7].disp=ampcab.disp;
+        }
+      }
+
       inst.ShowAll(false);
       document.getElementById("firmver").innerHTML=v;
     }
