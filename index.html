@@ -230,7 +230,7 @@ function MidiIf(ma){
         patches[this.scan].ReadBin(ev.data);
         DispPatchName(this.scan);
         for(var ii=0;ii<6;++ii){
-          var id=patches[this.scan].GetEffectId(ii);
+          var id=GetEffectId(this.scan,ii);
           if(id && effectlist[id]){
             effectlist[id].install=1;
             var el=document.getElementById("e_"+id);
@@ -286,7 +286,7 @@ function MidiIf(ma){
       else{
         patches[currentpatch].ReadBin(ev.data);
         for(var ii=0;ii<6;++ii){
-          var id=patches[currentpatch].GetEffectId(ii);
+          var id=GetEffectId(currentpatch,ii);
           if(id && effectlist[id]){
             effectlist[id].install=1;
             var el=document.getElementById("e_"+id);
@@ -362,7 +362,7 @@ function MidiIf(ma){
     var o=[];
     var len=(midiif.devid==0x5f)?4:6;
     for(var i=0;i<len;++i){
-      o.push(patches[currentpatch].GetEffectId(i));
+      o.push(GetEffectId(currentpatch,i));
     }
     this.SendCurrentPatch();
     setTimeout(function(){
@@ -370,7 +370,7 @@ function MidiIf(ma){
         var s="";
         this.workpatch.ReadBin(dat);
         for(var j=0;j<len;++j){
-          if(o[j]!=patches[currentpatch].GetEffectId(j)){
+          if(o[j]!=GetEffectId(currentpatch,j)){
             var el=document.getElementById("e_"+o[j]);
             if(el){
               el.classList.add("notinstall");
@@ -639,7 +639,7 @@ function Init(){
         DispPatch();
 
         if(f<=3 && f-1==currenteffect){
-          midiif.SendParamChange(f-1,p+1,patches[currentpatch].GetParamVal(f-1,p+1));
+          midiif.SendParamChange(f-1,p+1,GetParamVal(currentpatch,f-1,p+1));
         }
         else{
           midiif.SendCurrentPatch();
@@ -662,7 +662,7 @@ function Init(){
       v.ondblclick=function(ev){
         var f=parseInt(ev.target.id[1]);
         var p=parseInt(ev.target.id[3]);
-        var id=patches[currentpatch].GetEffectId(f-1);
+        var id=GetEffectId(currentpatch,f-1);
         var ef=effectlist[id];
         var par=ef.param[p-1];
         PopupEdit(f,p,par);
@@ -672,7 +672,7 @@ function Init(){
   }
   for(i=0;i<50;++i){
     for(var ii=0;ii<6;++ii){
-      var id=patches[i].GetEffectId(ii);
+      var id=GetEffectId(i,ii);
       if(id){
         effectlist[id].install=1;
         document.getElementById("e_"+id).classList.add("install");
@@ -961,7 +961,7 @@ function PopupEffectReplace(){
 }
 function PopupEffectInsert(){
   var efmax=(midiif.devid==0x5f)?4:6;
-  if(patches[currentpatch].fx[efmax-1][1]!=0)
+  if(GetEffectId(currentpatch,efmax-1)!=0)
     return;
   for(var j=efmax-1;j>currenteffect;--j){
     for(var k=0;k<11;++k){
@@ -1070,7 +1070,7 @@ function PopupPatchDelete(){
   Confirm("Delete patch ?",function(ev){
     for(var i=0;i<6;++i){
       for(var j=0;j<11;++j){
-        patches[currentpatch].fx[i][j]=0;
+        SetParamVal(currentpatch,i,j,0);
       }
     }
     patches[currentpatch].maxfx=1;
@@ -1225,20 +1225,17 @@ function SelectPort(){
       midiif.midiout=null;
   }
 }
-function GetEffectId(p,n){
-  return GetParamVal(p,n,1);
-}
 function GetParamVal(p,n,param){
   var pat=patches[p];
   if(!pat)
     return 0;
-  return pat.fx[n][param];
+  return pat.GetParamVal(n,param);
 }
 function SetParamVal(p,n,param,val){
   var pat=patches[p];
   if(!pat)
     return 0;
-  pat.fx[n][param]=val;
+  pat.SetParamVal(n,param,val);
 }
 function SetCurrentEffect(n){
   var pat=patches[currentpatch];
@@ -1272,13 +1269,16 @@ function SetEffect(p,n,ef){
   }
   DispPatch();
 }
+function GetEffectId(p,n){
+  return GetParamVal(p,n,1);
+}
 function GetEffectState(p,n){
   return GetParamVal(p,n,0);
 }
 function SetEffectState(p,n,on){
   SetParamVal(p,n,0,on?1:0);
   if(p==currentpatch){
-    var id=GetEffectId(p,n);
+    var id=GetEffectId(currentpatch,n);
     if(midiif.dump==3)
       console.log("effectid:"+id.toString(16));
     var ef=effectlist[id];
@@ -1296,8 +1296,8 @@ function ToggleEffect(n){
 function DispPatchName(p){
   document.getElementById((p+1)+"nam").innerHTML=patches[p].name;
   for(var i=0;i<6;++i){
-    var id=patches[p].GetEffectId(i);
-    var on=patches[p].GetEffectState(i);
+    var id=GetEffectId(p,i);
+    var on=GetEffectState(p,i);
     var icon=document.getElementById((p+1)+"_"+(i+1));
     if(midiif.devid==0x5f &&i>=4){
       icon.style.display="none";
@@ -1325,7 +1325,7 @@ function DispPatch(patch){
   dspgraph.style.height=42*efmax+"px";
   var dspsum=0;
   for(n=0;n<efmax;++n){
-    var id=patches[patch].GetEffectId(n);
+    var id=GetEffectId(patch,n);
     var ef=effectlist[id];
     if(!ef)
       id=0,ef=effectlist[0];
@@ -1352,7 +1352,7 @@ function DispPatch(patch){
       img.src="";
       t.innerHTML="unknown";
     }
-    if(ef && id!=0 && patches[patch].GetEffectState(n))
+    if(ef && id!=0 && GetEffectState(patch,n))
       c.classList.add("press");
     else
       c.classList.remove("press");
@@ -1375,7 +1375,7 @@ function DispPatch(patch){
             es.style.display="none";
             ek.style.display="block";
           }
-          var v=patches[patch].GetParamVal(n,p+2);
+          var v=GetParamVal(patch,n,p+2);
           if(typeof(ef.param[p].max)=="object"){
             for(var k=ef.param[p].max.length-1;k>=0;--k){
               if(ef.param[p].max[k]==v){

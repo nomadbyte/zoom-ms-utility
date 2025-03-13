@@ -135,6 +135,9 @@ apatch.prototype.maxfxidx=[
 apatch.prototype.GetParamVal=function(n,p){
   return this.fx[n][p];
 }
+apatch.prototype.SetParamVal=function(n,p,v){
+  this.fx[n][p]=v;
+}
 apatch.prototype.GetEffectId=function(n){
   return this.fx[n][1];
 };
