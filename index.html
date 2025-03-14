@@ -1628,6 +1628,50 @@ function StoreAll(callback){
   };
   this.Next();
 }
+function StoreAllVerify(){
+  this.savedpatches=[];
+  for(var n=0;n<50;++n){
+    this.savedpatches[n]=new apatch();
+    this.savedpatches[n].CopyFrom(patches[n]);
+  }
+  midiif.StartScan("update",function(){
+    var s="";
+    for(var n=0;n<50;++n){
+      var savedpatch=this.savedpatches[n];
+      var receivedpatch=patches[n];
+      for(var j=0;j<6;++j){
+        var id=savedpatch.GetEffectId(j);
+        if(id!=receivedpatch.GetEffectId(j)){
+          var ef=effectlist[id];
+          var el=document.getElementById("e_"+id);
+          if(el){
+            el.classList.add("notinstall");
+            if(ef.install==0)
+              ef.install=-1;
+            s+="["+ef.name+"]";
+          }
+        }
+      }
+    }
+    if(s.length){
+      AlertMsg("The following effect(s) are not installed:<br/>"+s);
+      console.log("Not installed:"+s);
+    }
+  }.bind(this));
+}
+function ReadBankPatches(patchfiles){
+  for(var name in patchfiles){
+    var data=patchfiles[name];
+    var n=parseInt(name.substr(0,2))-1;
+    if(n+1>50) continue;
+//    console.log("ReadBankPatches:["+n+"]:'"+name+"'");
+    var devpatch=new apatch();
+    devpatch.ReadBin(data);
+    patches[n].CopyFrom(midiif.ConvertDevPatch(devpatch));
+    DispPatchName(n);
+  }
+  new StoreAllVerify();
+}
 function LoadBank(){
   var i=document.createElement("input");
   i.type="file";
@@ -1645,25 +1689,46 @@ function LoadBank(){
             Confirm("Overwrite all patches, Sure?",
               function(ev){
                 ev.target.parentNode.parentNode.style.display="none";
-                zip.forEach(function(name,c){
-                  zip.file(name).async("string").then(function(txt){
-                    var n=parseInt(name.substr(0,2))-1;
+                var allowload=true;
+                var files=Object.keys(zip.files).map(function(name){
+                  return zip.files[name];
+                });
+                var promises = files.map(function(file) {
+                  return file.async("string").then(function(txt){
                     var bin=MakeBin(txt,146);
-                    patches[n].ReadBin(bin);
-                    if(bin[3]!=midiif.devid){
-                      AlertMsg("This patch is not for "+midiif.devstr);
-                      return;
-                    }
-                    DispPatchName(n);
-                    if(autosave){
-                      if(++cnt>=50){
-                        new StoreAll(function(){
-                          document.getElementById("waitbase").style.display="none";
-                        });
-                      }
-                    }
+                    return {name:file.name,data:bin};
                   });
                 });
+                var promiseoflist = Promise.all(promises);
+                promiseoflist.then(function(list) {
+                  var patchfiles=list.reduce(function(accumulator,current){
+                    accumulator[current.name] = current.data;
+                    return accumulator;
+                  }, {} /* initial value */);
+
+                  for(var name in patchfiles){
+                    var data=patchfiles[name];
+                    var devid=parseInt(data[3]);
+                    if(devid!=midiif.devid){
+                      console.log("LoadBank: patchfile:'"+name+"'"+" is for different devid:0x"+devid.toString(16));
+                      allowload=false;
+                      break;
+                    }
+                  }
+                  if(!allowload){
+                    Confirm("This bank is not for MS-"+midiif.devstr+".<br/> Load anyway ?",function(ev){
+                      ev.target.parentNode.parentNode.style.display="none";
+                      ReadBankPatches(patchfiles);
+                    });
+                    return;
+                  }
+                  ReadBankPatches(patchfiles);
+                });
+//                zip.forEach(function(name,c){
+//                  zip.file(name).async("string").then(function(txt){
+//                    var n=parseInt(name.substr(0,2))-1;
+//                  });
+//                });
               }
             );
           }
@@ -1674,21 +1739,32 @@ function LoadBank(){
     else{
       reader.readAsText(file[0]);
       reader.onload=function(ev){
-        if(reader.result.indexOf("1:f052005828")!=0){
+        if(!(reader.result.indexOf("1:f052005828")==0||reader.result.indexOf("1:f052005f28")==0||reader.result.indexOf("1:f052006128")==0)){
           AlertMsg("Bank file error");
           return;
         }
         var s=reader.result.split("\n");
-        for(var i=0;i<50;++i){
+        var patchfiles={};
+        var allowload=true;
+        for(var i in s){
           s[i]=s[i].split(":");
-          patches[i].ReadBin(MakeBin(s[i][1],146));
-          DispPatchName(i);
+          if(!s[i][1]) continue;
+          var name=("0"+s[i][0]).substr(-2)+"@";
+          var data=MakeBin(s[i][1],146);
+          var devid=parseInt(data[3]);
+          if(devid!=midiif.devid){
+            allowload=false;
+          }
+          patchfiles[name]=data;
         }
-        if(autosave){
-          new StoreAll(function(){
-            document.getElementById("waitbase").style.display="none";
+        if(!allowload){
+          Confirm("This bank is not for MS-"+midiif.devstr+".<br/> Load anyway ?",function(ev){
+            ev.target.parentNode.parentNode.style.display="none";
+            ReadBankPatches(patchfiles);
           });
+          return;
         }
+        ReadBankPatches(patchfiles);
       }
     }
   },false);
