@@ -95,7 +95,7 @@ function MidiIf(ma){
   this.scanmode="read";
   this.scancallback=null;
   this.dump=1;
-  this.supress=0;
+  this.suppress=0;
   this.waitdata=null;
   this.callback=null;
   this.ready=0;
@@ -139,7 +139,7 @@ function MidiIf(ma){
       console.log(midirecv);
       break;
     }
-    if((!this.supress||this.waitdata=="c0") && ev.data[0]==0xc0){
+    if((!this.suppress||this.waitdata=="c0") && ev.data[0]==0xc0){
       if(currentpatch!=ev.data[1] && this.scan<0){
         SetPatchFocus(0);
         currentpatch=ev.data[1];
@@ -287,7 +287,7 @@ function MidiIf(ma){
     }
     if(this.waitdata){
       if(midirecv.indexOf(this.waitdata)==0){
-        this.supress=0;
+        this.suppress=0;
         this.waitdata=null;
         if(this.callback){
           this.callback(ev.data,midirecv);
@@ -395,7 +395,7 @@ function MidiIf(ma){
     }.bind(this),200);
   };
   this.SendWait=function(sd,rv,cb){
-    this.supress=1;
+    this.suppress=1;
     this.callback=cb;
     this.waitdata=rv;
     this.SendDirect(sd);
@@ -419,7 +419,7 @@ function MidiIf(ma){
     }
     if(!this.midiout)
       return;
-    if(this.supress)
+    if(this.suppress)
       return;
     if(this.waitdata)
       return;
@@ -466,8 +466,8 @@ function MidiIf(ma){
     for(var ip=inputIterator.next(); !ip.done; ip=inputIterator.next()){
       if(ip.value.name.startsWith("ZOOM MS Series") && this.midiinport==null){
         this.midiinport=ip.value;
-        this.recvhander=this.recv.bind(this);
-        this.midiinport.onmidimessage=this.recvhander;
+        this.recvhandler=this.recv.bind(this);
+        this.midiinport.onmidimessage=this.recvhandler;
       }
     }
   };
