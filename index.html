@@ -85,7 +85,7 @@ function dumpeff(){
 }
 function MidiIf(ma){
   this.midiaccess=ma;
-  this.midiout=null;
+  this.midioutport=null;
   this.devid=0x58;
   this.version=3;
   this.devstr="50G";
@@ -309,7 +309,7 @@ function MidiIf(ma){
     this.scanmode=mode;
     this.scancallback=callback;
     console.log("StartScan:"+this.scanmode)
-    if(!this.midiout)
+    if(!this.midioutport)
       return;
     document.getElementById("waitmsg").innerHTML="";
     document.getElementById("waitbase").style.display="block";
@@ -334,8 +334,8 @@ function MidiIf(ma){
   this.SendDirect=function(d){
     if(this.dump==4)
       console.log("S:"+MakeStr(d));
-    if(this.midiout)
-      this.midiout.send(d);
+    if(this.midioutport)
+      this.midioutport.send(d);
   };
   this.Send=function(d){
     if(this.que.length>2){
@@ -417,7 +417,7 @@ function MidiIf(ma){
       abort=true;
       return;
     }
-    if(!this.midiout)
+    if(!this.midioutport)
       return;
     if(this.suppress)
       return;
@@ -476,14 +476,14 @@ function MidiIf(ma){
   this.SelectPort=function(){
     var idx=document.getElementById("midiport").selectedIndex;
     if(idx>=0 && midioutputs.length>0){
-      this.midiout=midioutputs[idx];
-      if (!this.midiout.name.startsWith("ZOOM MS Series"))
-        this.midiout=null;
+      this.midioutport=midioutputs[idx];
+      if (!this.midioutport.name.startsWith("ZOOM MS Series"))
+        this.midioutport=null;
     }
   };
   this.PortScan();
   this.SelectPort();
-  if(!this.midiout)
+  if(!this.midioutport)
     AlertMsg("<br/>MIDI port is not found.<br/>Retry after connecting ZOOM MS device.");
   this.timerid=setInterval(this.timer.bind(this),80);
 }
@@ -1229,9 +1229,9 @@ function PopupPatchRename(){
 }
 function SelectPort(){
   if(midioutputs.length>0){
-    midiif.midiout=midioutputs[document.getElementById("midiport").selectedIndex];
-    if(midiif.midiout && midiif.midiout.name!="ZOOM MS Series")
-      midiif.midiout=null;
+    midiif.midioutport=midioutputs[document.getElementById("midiport").selectedIndex];
+    if(midiif.midioutport && midiif.midioutport.name!="ZOOM MS Series")
+      midiif.midioutport=null;
   }
 }
 function GetParamVal(p,n,param){
