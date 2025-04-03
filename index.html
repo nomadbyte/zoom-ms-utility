@@ -451,12 +451,14 @@ function MidiIf(ma){
     midioutputs=[];
     document.getElementById("midiport").innerHTML="";
     var i=0;
+    var midiportSelected=false;
     var outputIterator=this.midiaccess.outputs.values();
     for(var o=outputIterator.next(); !o.done; o=outputIterator.next()){
         midioutputs[i]=o.value;
         var op=new Option(o.value.name);
-        if(o.value.name.startsWith("ZOOM MS Series"))
-          op.selected=true;
+        if(o.value.name.startsWith("ZOOM MS Series")){
+          if(!midiportSelected) midiportSelected=op.selected=true;
+        }
         else
           op.disabled=true;
         document.getElementById("midiport").options[i]=op;
