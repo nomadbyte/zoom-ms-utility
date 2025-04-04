@@ -563,6 +563,14 @@ function Init(){
   for(i=0;i<50;++i)
     patches[i]=new apatch();
   AutoSave();
+  InitCurrentPatchPanel();
+  InitPatchListPanel();
+  InitEffectPanel();
+  ShowDoc(GetLang()=="ja"?"ja":"en");
+  inst=new InstallChecker();
+  SetupKeyboardActions();
+}
+function InitCurrentPatchPanel(){
   for(i=0;i<6;++i){
     var ef=document.getElementById("fnam"+(i+1));
     var im=document.getElementById("fimg"+(i+1));
@@ -693,6 +701,8 @@ function Init(){
 
     }
   }
+}
+function InitPatchListPanel(){
   for(i=0;i<50;++i){
     for(var ii=0;ii<6;++ii){
       var id=GetEffectId(i,ii);
@@ -762,6 +772,8 @@ function Init(){
       }
     };
   }
+}
+function InitEffectPanel(){
   for(var id in effectlist){
     var ef=effectlist[id];
     var e=document.createElement("div");
@@ -809,8 +821,8 @@ function Init(){
       }
     }
   }
-  ShowDoc(GetLang()=="ja"?"ja":"en");
-  inst=new InstallChecker();
+}
+function SetupKeyboardActions(){
   document.addEventListener("click",function(ev){
     PopupEffectCancel();
     PopupPatchCancel();
