@@ -139,7 +139,7 @@ function MidiIf(ma){
       console.log(midirecv);
       break;
     }
-    if((!this.supress ||this.waitdata=="c0") && ev.data[0]==0xc0){
+    if((!this.supress||this.waitdata=="c0") && ev.data[0]==0xc0){
       if(currentpatch!=ev.data[1] && this.scan<0){
         SetPatchFocus(0);
         currentpatch=ev.data[1];
@@ -189,7 +189,7 @@ function MidiIf(ma){
       for(var id in effectlist){
         var ef=effectlist[id];
         if(ef.group=="AMP"){
-          var ampcab = null;
+          var ampcab=null;
           switch((id>>24)&0xff){
           case 0x04: ampcab=gampcab[(v>=(this.devid==0x58?3:2))?1:0];  // assume comparable age of the fw
           break;
@@ -452,7 +452,7 @@ function MidiIf(ma){
     document.getElementById("midiport").innerHTML="";
     var i=0;
     var outputIterator=this.midiaccess.outputs.values();
-    for(var o=outputIterator.next(); !o.done; o=outputIterator.next()) {
+    for(var o=outputIterator.next(); !o.done; o=outputIterator.next()){
         midioutputs[i]=o.value;
         var op=new Option(o.value.name);
         if(o.value.name.startsWith("ZOOM MS Series"))
@@ -512,8 +512,8 @@ function MakeBin(s,len){
 function Init(){
   var i;
   if(typeof(nw)!="undefined"){
-    var nwgui= require("nw.gui");
-    nwgui.Window.get().on('new-win-policy', function(frame, url, policy) {
+    var nwgui=require("nw.gui");
+    nwgui.Window.get().on('new-win-policy', function(frame, url, policy){
       policy.ignore();
       nwgui.Shell.openExternal(url);
     });
@@ -635,7 +635,7 @@ function Init(){
         ev.preventDefault();
       };
       k.valuetip=0;
-      k.oninput = function(k){
+      k.oninput=function(k){
         var f=parseInt(k.target.id[1]);
         var p=parseInt(k.target.id[3]);
         SetCurrentEffect(f-1);
@@ -1107,7 +1107,7 @@ function PopupEdit(f,p,par){
     ev.stopPropagation();
   }
   switch(typeof(par.disp)){
-  case "object": 
+  case "object":
     if(typeof(par.disp.min)=="undefined"){
       var s=`<div style='height:${par.disp.length*20}px'>`;
       for(let i=0;i<par.disp.length;++i){
@@ -1602,7 +1602,7 @@ function SaveBank(){
     var n=("0"+(p+1)).substr(-2)+"@"+(patches[p].name.replace(/ +/g,"").replace(/ /g,"_"))+"."+midiif.devstr.toLowerCase();
     zip.file(n,s);
   }
-  zip.generateAsync({type:"blob"}).then(function (blob) {
+  zip.generateAsync({type:"blob"}).then(function (blob){
     var a=document.createElement("a");
     a.href=URL.createObjectURL(blob);
     a.target="_blank";
@@ -1702,16 +1702,16 @@ function LoadBank(){
                 var files=Object.keys(zip.files).map(function(name){
                   return zip.files[name];
                 });
-                var promises = files.map(function(file) {
+                var promises=files.map(function(file){
                   return file.async("string").then(function(txt){
                     var bin=MakeBin(txt,146);
                     return {name:file.name,data:bin};
                   });
                 });
-                var promiseoflist = Promise.all(promises);
-                promiseoflist.then(function(list) {
+                var promiseoflist=Promise.all(promises);
+                promiseoflist.then(function(list){
                   var patchfiles=list.reduce(function(accumulator,current){
-                    accumulator[current.name] = current.data;
+                    accumulator[current.name]=current.data;
                     return accumulator;
                   }, {} /* initial value */);
 
@@ -1969,7 +1969,7 @@ function ImportText(){
       if(autosave)
         StorePatch(currentpatch);
     }
-    else {
+    else{
       AlertMsg("No patch data is found.");
     }
     document.getElementById("textareabase").style.display="none";
@@ -1978,17 +1978,17 @@ function ImportText(){
 function OpenUrl(url){
   window.open(url);
 }
-function ShowDoc(x) {
+function ShowDoc(x){
   var divs=document.getElementsByTagName("div");
   var t="doc_"+x;
-  for(var i=0;i<divs.length;++i) {
+  for(var i=0;i<divs.length;++i){
     if(divs[i].className==="doc_ja")
       divs[i].style.display=(x==="ja")?"block":"none";
     if(divs[i].className=="doc_en")
       divs[i].style.display=(x==="ja")?"none":"block";
   }
 }
-function GetLang() {
+function GetLang(){
   return (navigator.language || navigator.browserLanguage).substring(0, 2);
 }
 window.addEventListener("load",Init);
@@ -2138,7 +2138,7 @@ img{
   padding:10px;
   overflow-y:auto;
 }
-#popupeditpanel button {
+#popupeditpanel button{
   width:140px;
   height:20px;
 }
@@ -2368,7 +2368,7 @@ img{
   border-spacing:0px;
   box-shadow:1px 1px 1px 1px rgba(0,0,0,0.3);
 }
-#effects th {
+#effects th{
   width:22px;
 }
 #effects td{

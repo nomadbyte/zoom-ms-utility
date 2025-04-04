@@ -306,4 +306,4 @@ apatch.prototype.MakeBin=function(id,effectlistlocal){
   return r;
 };
 var nullpatch=new apatch();
-if (typeof module === 'object') {module.exports = apatch;}
+if(typeof module === 'object'){module.exports=apatch;}

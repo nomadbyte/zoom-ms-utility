@@ -2279,5 +2279,5 @@ var gampcab=[
   }
 ];
 
-if (typeof module === 'object') {module.exports = [effectlist,bampcab,gampcab];}
+if(typeof module === 'object'){module.exports=[effectlist,bampcab,gampcab];}
 
