@@ -182,6 +182,7 @@ function MidiIf(ma){
         abort=true;
         return;
       }
+      inst.InitEffectPanel();
       this.instSet();
       document.getElementById("device").innerHTML="MS-"+this.devstr;
       document.getElementById("effects").rows[4].style.display=(this.devid==0x5f?"none":"");
@@ -565,7 +566,6 @@ function Init(){
   AutoSave();
   InitCurrentPatchPanel();
   InitPatchListPanel();
-  InitEffectPanel();
   ShowDoc(GetLang()=="ja"?"ja":"en");
   inst=new InstallChecker();
   SetupKeyboardActions();
@@ -771,55 +771,6 @@ function InitPatchListPanel(){
         };
       }
     };
-  }
-}
-function InitEffectPanel(){
-  for(var id in effectlist){
-    var ef=effectlist[id];
-    var e=document.createElement("div");
-    var im1="./images/50v"+(ef.ver&0xf)+".png";
-    var im2="./images/60v"+((ef.ver>>4)&0xf)+".png";
-    var im3="./images/70v"+((ef.ver>>8)&0xf)+".png";
-    e.innerHTML="<div class='dspbar'></div><img src='./images/"+ef.name.replace(/ /g,"_")+".png' draggable='false'/><div>"+ef.name+"</div><img class='mk50' src='"+im1+"'/><img class='mk60' src='"+im2+"'/><img class='mk70' src='"+im3+"'/>";
-    e.setAttribute("class","efitem");
-    e.setAttribute("title",ef.title);
-    var b=e.childNodes[0];
-//    var d=(ef.dspmax+ef.dspmin)*.5;
-    var d=1/ef.dsp;
-    b.style.height=d*40+"px";
-    var r=(d>=0.33?255:d*3*255)|0;
-    var g=(d>=0.5?0:(d>=0.33?255-(d-0.33)*5.9*255:255))|0;
-    b.style.background=ef.col="rgb("+r+","+g+",0)";
-    b.style.borderTop=((40-d*40)|0)+"px solid #000";
-    var div=document.getElementById("ef"+ef.group);
-    if(div){
-      div.appendChild(e);
-      e.id="e_"+id;
-      e.onclick=function(ev){
-        if(document.getElementById("effectpanelmsg").innerHTML!="Install Check"){
-          var id=ev.target.id;
-          if(!id)
-            id=ev.target.parentNode.id;
-          id=parseInt(id.substring(2));
-          var ef=GetEffectFromId(id);
-          SetEffect(currentpatch,currenteffect,ef);
-          SetCurrentEffect(currenteffect);
-          EffectPanelCancel();
-          if(effectlist[id].install==0){
-            effectlist[id].install=-1;
-            document.getElementById("e_"+id).classList.add("notinstall");
-          }
-          midiif.SendCurrentPatch();
-          midiif.RequestPatch();
-          dirty=1;
-
-//?
-//          midiif.SendCurrentPatchVerify(null,function(s){
-//            AlertMsg("Effect "+s+" is not installed.");
-//          });
-        }
-      }
-    }
   }
 }
 function SetupKeyboardActions(){
@@ -1254,8 +1205,10 @@ function PopupPatchRename(){
 function SelectPort(){
   if(midiif){
     midiif.SelectPort();
-    if(midiif.midioutport)
+    if(midiif.midioutport){
+      inst.ResetEffectPanel();
       Scan();
+    }
   }
 }
 function GetParamVal(p,n,param){
@@ -1508,6 +1461,8 @@ function StorePatch(p,callback){
     midiif.Send(cmd);
 }
 function InstallChecker(){
+  this.efpanelready=false;
+  this.efgroupids={};
   this.list=[];
   this.n=0;
   this.norg=0;
@@ -1567,6 +1522,71 @@ function InstallChecker(){
       }
     }
   };
+  this.ResetEffectPanel=function(){
+    for(g in this.efgroupids){
+      var div=document.getElementById(this.efgroupids[g]);
+      if(div){
+        while(div.hasChildNodes())
+          div.removeChild(div.firstChild);
+      }
+    }
+    this.efgroupids={};
+    this.efpanelready=false;
+  };
+  this.InitEffectPanel=function(){
+    if(this.efpanelready) return;
+    for(var id in effectlist){
+      if(!id) continue;
+      var ef=effectlist[id];
+      var e=document.createElement("div");
+      var im1="./images/50v"+(ef.ver&0xf)+".png";
+      var im2="./images/60v"+((ef.ver>>4)&0xf)+".png";
+      var im3="./images/70v"+((ef.ver>>8)&0xf)+".png";
+      e.innerHTML="<div class='dspbar'></div><img src='./images/"+ef.name.replace(/ /g,"_")+".png' draggable='false'/><div>"+ef.name+"</div><img class='mk50' src='"+im1+"'/><img class='mk60' src='"+im2+"'/><img class='mk70' src='"+im3+"'/>";
+      e.setAttribute("class","efitem");
+      e.setAttribute("title",ef.title);
+      var b=e.childNodes[0];
+//      var d=(ef.dspmax+ef.dspmin)*.5;
+      var d=1/ef.dsp;
+      b.style.height=d*40+"px";
+      var r=(d>=0.33?255:d*3*255)|0;
+      var g=(d>=0.5?0:(d>=0.33?255-(d-0.33)*5.9*255:255))|0;
+      b.style.background=ef.col="rgb("+r+","+g+",0)";
+      b.style.borderTop=((40-d*40)|0)+"px solid #000";
+      var div=document.getElementById("ef"+ef.group);
+      if(div){
+        this.efgroupids[ef.group]=div.id;
+        div.appendChild(e);
+        e.id="e_"+id;
+        e.onclick=function(ev){
+          if(document.getElementById("effectpanelmsg").innerHTML!="Install Check"){
+            var id=ev.target.id;
+            if(!id)
+              id=ev.target.parentNode.id;
+            id=parseInt(id.substring(2));
+            var ef=GetEffectFromId(id);
+            SetEffect(currentpatch,currenteffect,ef);
+            SetCurrentEffect(currenteffect);
+            EffectPanelCancel();
+            if(effectlist[id].install==0){
+              effectlist[id].install=-1;
+              document.getElementById("e_"+id).classList.add("notinstall");
+            }
+            midiif.SendCurrentPatch();
+            midiif.RequestPatch();
+            dirty=1;
+
+//?
+//            midiif.SendCurrentPatchVerify(null,function(s){
+//              AlertMsg("Effect "+s+" is not installed.");
+//            });
+          }
+        }
+      }
+    }
+    this.efpanelready=true;
+  };
+
   setInterval(this.timer.bind(this),500);
 }
 function InstallCheck(){
