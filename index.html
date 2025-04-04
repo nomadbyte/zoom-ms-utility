@@ -116,12 +116,12 @@ function MidiIf(ma){
       var el=document.getElementById("e_"+id);
       if(el){
         if(v==0||v>this.version){
-          effectlist[id].install=-2;
-          document.getElementById("e_"+id).classList.add("notinstall");
+          effectlist[id].installed=-2;
+          document.getElementById("e_"+id).classList.add("notinstalled");
         }
         else if(this.devid!=0x58){
-          effectlist[id].install=1;
-          document.getElementById("e_"+id).classList.add("install");
+          effectlist[id].installed=1;
+          document.getElementById("e_"+id).classList.add("installed");
         }
       }
     }
@@ -215,9 +215,9 @@ function MidiIf(ma){
         for(var ii=0;ii<6;++ii){
           var id=GetEffectId(this.scan,ii);
           if(id && effectlist[id]){
-            effectlist[id].install=1;
+            effectlist[id].installed=1;
             var el=document.getElementById("e_"+id);
-            if(el) el.classList.add("install");
+            if(el) el.classList.add("installed");
           }
         }
         ++this.scan;
@@ -277,9 +277,9 @@ function MidiIf(ma){
         for(var ii=0;ii<6;++ii){
           var id=GetEffectId(currentpatch,ii);
           if(id && effectlist[id]){
-            effectlist[id].install=1;
+            effectlist[id].installed=1;
             var el=document.getElementById("e_"+id);
-            if(el) el.classList.add("install");
+            if(el) el.classList.add("installed");
           }
         }
         DispPatch();
@@ -378,9 +378,9 @@ function MidiIf(ma){
           if(o[j]!=GetEffectId(currentpatch,j)){
             var el=document.getElementById("e_"+o[j]);
             if(el){
-              el.classList.add("notinstall");
-              if(effectlist[o[j]].install==0)
-                effectlist[o[j]].install=-1;
+              el.classList.add("notinstalled");
+              if(effectlist[o[j]].installed==0)
+                effectlist[o[j]].installed=-1;
               effects[o[j]]="["+effectlist[o[j]].name+"]";
             }
           }
@@ -707,8 +707,8 @@ function InitPatchListPanel(){
     for(var ii=0;ii<6;++ii){
       var id=GetEffectId(i,ii);
       if(id){
-        effectlist[id].install=1;
-        document.getElementById("e_"+id).classList.add("install");
+        effectlist[id].installed=1;
+        document.getElementById("e_"+id).classList.add("installed");
       }
     }
     var cell=document.getElementById((i+1)+"nam");
@@ -1473,9 +1473,9 @@ function InstallChecker(){
     SelectPatch(49);
     this.n=0;
     for(var id in effectlist){
-      if(effectlist[id].install==0){
-        effectlist[id].install=-1;
-        document.getElementById("e_"+id).classList.add("notinstall");
+      if(effectlist[id].installed==0){
+        effectlist[id].installed=-1;
+        document.getElementById("e_"+id).classList.add("notinstalled");
         this.list.push(parseInt(id));
       }
     }
@@ -1514,7 +1514,7 @@ function InstallChecker(){
           el.style.display="inline-block";
         else{
           var ef=effectlist[id];
-          if(ef.install>=-1)
+          if(ef.installed>=-1)
             el.style.display="inline-block";
           else
             el.style.display="none";
@@ -1568,9 +1568,9 @@ function InstallChecker(){
             SetEffect(currentpatch,currenteffect,ef);
             SetCurrentEffect(currenteffect);
             EffectPanelCancel();
-            if(effectlist[id].install==0){
-              effectlist[id].install=-1;
-              document.getElementById("e_"+id).classList.add("notinstall");
+            if(effectlist[id].installed==0){
+              effectlist[id].installed=-1;
+              document.getElementById("e_"+id).classList.add("notinstalled");
             }
             midiif.SendCurrentPatch();
             midiif.RequestPatch();
@@ -1696,9 +1696,9 @@ function StoreAllVerify(){
           var ef=effectlist[id];
           var el=document.getElementById("e_"+id);
           if(el){
-            el.classList.add("notinstall");
-            if(ef.install==0)
-              ef.install=-1;
+            el.classList.add("notinstalled");
+            if(ef.installed==0)
+              ef.installed=-1;
             effects[id]="["+ef.name+"]";
           }
         }
@@ -2563,16 +2563,16 @@ webaudio-switch{
   cursor:pointer;
   background:linear-gradient(#dde,#bbc);
 }
-.notinstall{
+.notinstalled{
   background:linear-gradient(#c99,#b88);
 }
-.install{
+.installed{
   background:linear-gradient(#cfc,#ada);
 }
-.notinstall:hover{
+.notinstalled:hover{
   background:linear-gradient(#fdd,#ecc);
 }
-.install:hover{
+.installed:hover{
   background:linear-gradient(#dfd,#cec);
 }
 .efitem img{
