@@ -117,11 +117,11 @@ function MidiIf(ma){
       if(el){
         if(v==0||v>this.version){
           effectlist[id].installed=-2;
-          document.getElementById("e_"+id).classList.add("notinstalled");
+          el.classList.add("notinstalled");
         }
         else if(this.devid!=0x58){
           effectlist[id].installed=1;
-          document.getElementById("e_"+id).classList.add("installed");
+          el.classList.add("installed");
         }
       }
     }
@@ -217,7 +217,11 @@ function MidiIf(ma){
           if(id && effectlist[id]){
             effectlist[id].installed=1;
             var el=document.getElementById("e_"+id);
-            if(el) el.classList.add("installed");
+            if(el){
+              el.classList.remove("notinstalled");
+              el.classList.add("installed");
+            }
+            inst.ShowEffectIcon(id);
           }
         }
         ++this.scan;
@@ -279,7 +283,11 @@ function MidiIf(ma){
           if(id && effectlist[id]){
             effectlist[id].installed=1;
             var el=document.getElementById("e_"+id);
-            if(el) el.classList.add("installed");
+            if(el){
+              el.classList.remove("notinstalled");
+              el.classList.add("installed");
+            }
+            inst.ShowEffectIcon(id);
           }
         }
         DispPatch();
@@ -708,7 +716,11 @@ function InitPatchListPanel(){
       var id=GetEffectId(i,ii);
       if(id){
         effectlist[id].installed=1;
-        document.getElementById("e_"+id).classList.add("installed");
+        el=document.getElementById("e_"+id);
+        if(el){
+          el.classList.remove("notinstalled");
+          el.classList.add("installed");
+        }
       }
     }
     var cell=document.getElementById((i+1)+"nam");
@@ -1506,20 +1518,21 @@ function InstallChecker(){
       }.bind(this),700);
     }
   };
+  this.ShowEffectIcon=function(id){
+    var el=document.getElementById("e_"+id);
+    if(el) el.style.display="inline-block";
+  };
+  this.HideEffectIcon=function(id){
+    var el=document.getElementById("e_"+id);
+    if(el) el.style.display="none";
+  };
   this.ShowAll=function(f){
     for(id in effectlist){
-      var el=document.getElementById("e_"+id);
-      if(el){
-        if(f)
-          el.style.display="inline-block";
-        else{
-          var ef=effectlist[id];
-          if(ef.installed>=-1)
-            el.style.display="inline-block";
-          else
-            el.style.display="none";
-        }
-      }
+      var ef=effectlist[id];
+      if(f || ef.installed>=-1)
+        this.ShowEffectIcon(id);
+      else
+        this.HideEffectIcon(id);
     }
   };
   this.ResetEffectPanel=function(){
