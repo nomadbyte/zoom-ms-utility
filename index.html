@@ -74,13 +74,22 @@ var tunerkey="F9";
 var dirty=0;
 
 function dumpeff(){
-  console.log("name,group,ms50g,ms60b,ms70cdr,dsp(%),description")
+  console.log("name,group,ms50g,ms60b,ms70cdr,dsp(%),description,id,order")
   for(i in effectlist){
     var ef=effectlist[i];
     var v50=ef.ver&0xf;
     var v60=(ef.ver>>4)&0xf;
     var v70=(ef.ver>>8)&0xf;
-    console.log("\""+ef.name+"\","+ef.group+","+((v50>0)?v50:"")+","+((v60>0)?v60:"")+","+((v70>0)?v70:"")+","+(100/ef.dsp).toFixed(1)+","+ef.title);
+    var id=parseInt(i);
+    console.log("\""+ef.name+"\","+ef.group+","+((v50>0)?v50:"")+","+((v60>0)?v60:"")+","+((v70>0)?v70:"")+","+(100/ef.dsp).toFixed(1)+",\""+ef.title+"\","+"0x"+id.toString(16)+","+ef.order);
+  }
+  for(i in xeffectlist){
+    var ef=xeffectlist[i];
+    var v50=ef.ver&0xf;
+    var v60=(ef.ver>>4)&0xf;
+    var v70=(ef.ver>>8)&0xf;
+    var id=parseInt(i);
+    console.log("\""+ef.name+"\","+ef.group+","+((v50>0)?v50:"")+","+((v60>0)?v60:"")+","+((v70>0)?v70:"")+","+(100/ef.dsp).toFixed(1)+",\""+ef.title+"\","+"0x"+id.toString(16)+","+ef.order);
   }
 }
 function MidiIf(ma){
@@ -191,6 +200,18 @@ function MidiIf(ma){
           case 0x04: ampcab=gampcab[(v>=(this.devid==0x58?3:2))?1:0];  // assume comparable age of the fw
           break;
           case 0x05: ampcab=bampcab[(v>=(this.devid==0x58?3:2))?1:0];  // assume comparable age of the fw
+          break;
+          }
+          ef.param[7].max=ampcab.max;
+          ef.param[7].disp=ampcab.disp;
+        }
+      }
+      for(var id in xeffectlist){
+        var ef=xeffectlist[id];
+        if(ef.group=="AMP"){
+          var ampcab = null;
+          switch((id>>24)&0xff){
+          case 0x05: ampcab=xbampcab[(v>=(this.devid==0x58?3:2))?1:0];  // assume comparable age of the fw
           break;
           }
           ef.param[7].max=ampcab.max;
