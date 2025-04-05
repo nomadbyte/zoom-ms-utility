@@ -107,16 +107,17 @@ function MidiIf(ma){
   };
   this.instSet=function(){
     for(var id in effectlist){
-      var v=effectlist[id].ver;
+      var efi=this.GetEffectInfo(id);
+      var v=efi.ef.ver;
       switch(this.devid){
       case 0x58: v=v&0xf; break;
       case 0x5f: v=(v>>4)&0xf; break;
       case 0x61: v=(v>>8)&0xf; break;
       }
-      var el=document.getElementById("e_"+id);
+      var el=document.getElementById("e_"+efi.id);
       if(el){
         if(v==0||v>this.version){
-          effectlist[id].installed=-2;
+          efi.ef.installed=-2;
           el.classList.add("notinstalled");
         }
       }
@@ -210,14 +211,15 @@ function MidiIf(ma){
         DispPatchName(this.scan);
         for(var ii=0;ii<6;++ii){
           var id=GetEffectId(this.scan,ii);
-          if(id && effectlist[id]){
-            effectlist[id].installed=1;
-            var el=document.getElementById("e_"+id);
+          var efi=this.GetEffectInfo(id);
+          if(efi.id && efi.ef){
+            efi.ef.installed=1;
+            var el=document.getElementById("e_"+efi.id);
             if(el){
               el.classList.remove("notinstalled");
               el.classList.add("installed");
             }
-            inst.ShowEffectIcon(id);
+            inst.ShowEffectIcon(efi.id);
           }
         }
         ++this.scan;
@@ -276,14 +278,15 @@ function MidiIf(ma){
         patches[currentpatch].ReadBin(ev.data);
         for(var ii=0;ii<6;++ii){
           var id=GetEffectId(currentpatch,ii);
-          if(id && effectlist[id]){
-            effectlist[id].installed=1;
-            var el=document.getElementById("e_"+id);
+          var efi=this.GetEffectInfo(id);
+          if(efi.id && efi.ef){
+            efi.ef.installed=1;
+            var el=document.getElementById("e_"+efi.id);
             if(el){
               el.classList.remove("notinstalled");
               el.classList.add("installed");
             }
-            inst.ShowEffectIcon(id);
+            inst.ShowEffectIcon(efi.id);
           }
         }
         DispPatch();
@@ -299,6 +302,14 @@ function MidiIf(ma){
         }
       }
     }
+  };
+  this.GetEffectInfo=function(id){
+    id=parseInt(id);
+    var ef=effectlist[id];
+    if(!ef){
+      console.log("Not found effectid: 0x"+id.toString(16));
+    }
+    return {id:id,ef:ef};
   };
   this.ConvertDevPatch=function(devpatch){
     devpatch.devid=this.devid;
@@ -380,12 +391,13 @@ function MidiIf(ma){
         this.workpatch.ReadBin(dat);
         for(var j=0;j<len;++j){
           if(o[j]!=GetEffectId(currentpatch,j)){
-            var el=document.getElementById("e_"+o[j]);
+            var efi=this.GetEffectInfo(o[j]);
+            var el=document.getElementById("e_"+efi.id);
             if(el){
               el.classList.add("notinstalled");
-              if(effectlist[o[j]].installed==0)
-                effectlist[o[j]].installed=-1;
-              effects[o[j]]="["+effectlist[o[j]].name+"]";
+              if(efi.ef.installed==0)
+                efi.ef.installed=-1;
+              effects[efi.id]="["+efi.ef.name+"]";
             }
           }
         }
@@ -698,8 +710,8 @@ function InitCurrentPatchPanel(){
         var f=parseInt(ev.target.id[1]);
         var p=parseInt(ev.target.id[3]);
         var id=GetEffectId(currentpatch,f-1);
-        var ef=effectlist[id];
-        var par=ef.param[p-1];
+        var efi=midiif.GetEffectInfo(id);
+        var par=efi.ef.param[p-1];
         PopupEdit(f,p,par);
       }
 
@@ -711,11 +723,14 @@ function InitPatchListPanel(){
     for(var ii=0;ii<6;++ii){
       var id=GetEffectId(i,ii);
       if(id){
-        effectlist[id].installed=1;
-        el=document.getElementById("e_"+id);
-        if(el){
-          el.classList.remove("notinstalled");
-          el.classList.add("installed");
+        var efi=midiif.GetEffectInfo(id);
+        if(efi.id && efi.ef){
+          efi.ef.installed=1;
+          el=document.getElementById("e_"+efi.id);
+          if(el){
+            el.classList.remove("notinstalled");
+            el.classList.add("installed");
+          }
         }
       }
     }
@@ -1239,10 +1254,11 @@ function SetCurrentEffect(n){
 }
 function GetEffectFromId(id){
   var ef=[];
-  if(!effectlist[id])
-    id=0;
-  var e=effectlist[id];
-  id=parseInt(id);
+  var efi=midiif.GetEffectInfo(id);
+  if(!efi.ef)
+    efi=midiif.GetEffectInfo(0);
+  var e=efi.ef;
+  id=parseInt(efi.id);
   ef.push(1);
   ef.push(id);
   for(var i=0;i<e.param.length;++i)
@@ -1274,10 +1290,10 @@ function SetEffectState(p,n,on){
   if(p==currentpatch){
     var id=GetEffectId(currentpatch,n);
     if(midiif.dump==3)
-      console.log("effectid:"+id.toString(16));
-    var ef=effectlist[id];
+      console.log("effectid: 0x"+id.toString(16));
+    var efi=midiif.GetEffectInfo(id);
     var c=document.getElementById("fnam"+(n+1));
-    if(ef && id!=0 && on)
+    if(efi.ef && efi.id!=0 && on)
       c.classList.add("press");
     else
       c.classList.remove("press");
@@ -1320,9 +1336,11 @@ function DispPatch(patch){
   var dspsum=0;
   for(n=0;n<efmax;++n){
     var id=GetEffectId(patch,n);
-    var ef=effectlist[id];
-    if(!ef)
-      id=0,ef=effectlist[0];
+    var efi=midiif.GetEffectInfo(id);
+    if(!efi.ef)
+      efi=midiif.GetEffectInfo(0);
+    var ef=efi.ef;
+    id=efi.id;
     var b=dspgraph.childNodes[n];
 //    b.style.height=(ef.dspmax+ef.dspmin)*50+"%";
     b.style.height=(1/ef.dsp)*100+"%";
@@ -1481,10 +1499,11 @@ function InstallChecker(){
     SelectPatch(49);
     this.n=0;
     for(var id in effectlist){
-      if(effectlist[id].installed==0){
-        effectlist[id].installed=-1;
-        document.getElementById("e_"+id).classList.add("notinstalled");
-        this.list.push(parseInt(id));
+      var efi=midiif.GetEffectInfo(id);
+      if(efi.ef.installed==0){
+        efi.ef.installed=-1;
+        document.getElementById("e_"+efi.id).classList.add("notinstalled");
+        this.list.push(parseInt(efi.id));
       }
     }
     if(this.list.length>0){
@@ -1524,11 +1543,11 @@ function InstallChecker(){
   };
   this.ShowAll=function(f){
     for(id in effectlist){
-      var ef=effectlist[id];
-      if(f || ef.installed>=-1)
-        this.ShowEffectIcon(id);
+      var efi=midiif.GetEffectInfo(id);
+      if(f || efi.ef.installed>=-1)
+        this.ShowEffectIcon(efi.id);
       else
-        this.HideEffectIcon(id);
+        this.HideEffectIcon(efi.id);
     }
   };
   this.ResetEffectPanel=function(){
@@ -1546,7 +1565,8 @@ function InstallChecker(){
     if(this.efpanelready) return;
     for(var id in effectlist){
       if(!id) continue;
-      var ef=effectlist[id];
+      var efi=midiif.GetEffectInfo(id);
+      var ef=efi.ef;
       var e=document.createElement("div");
       var im1="./images/50v"+(ef.ver&0xf)+".png";
       var im2="./images/60v"+((ef.ver>>4)&0xf)+".png";
@@ -1566,7 +1586,7 @@ function InstallChecker(){
       if(div){
         this.efgroupids[ef.group]=div.id;
         div.appendChild(e);
-        e.id="e_"+id;
+        e.id="e_"+efi.id;
         e.onclick=function(ev){
           if(document.getElementById("effectpanelmsg").innerHTML!="Install Check"){
             var id=ev.target.id;
@@ -1577,9 +1597,10 @@ function InstallChecker(){
             SetEffect(currentpatch,currenteffect,ef);
             SetCurrentEffect(currenteffect);
             EffectPanelCancel();
-            if(effectlist[id].installed==0){
-              effectlist[id].installed=-1;
-              document.getElementById("e_"+id).classList.add("notinstalled");
+            var efi=midiif.GetEffectInfo(id);
+            if(efi.ef.installed==0){
+              efi.ef.installed=-1;
+              document.getElementById("e_"+efi.id).classList.add("notinstalled");
             }
             midiif.SendCurrentPatch();
             midiif.RequestPatch();
@@ -1702,13 +1723,13 @@ function StoreAllVerify(){
       for(var j=0;j<6;++j){
         var id=savedpatch.GetEffectId(j);
         if(id!=receivedpatch.GetEffectId(j)){
-          var ef=effectlist[id];
-          var el=document.getElementById("e_"+id);
+          var efi=midiif.GetEffectInfo(id);
+          var el=document.getElementById("e_"+efi.id);
           if(el){
             el.classList.add("notinstalled");
-            if(ef.installed==0)
-              ef.installed=-1;
-            effects[id]="["+ef.name+"]";
+            if(efi.ef.installed==0)
+              efi.ef.installed=-1;
+            effects[efi.id]="["+efi.ef.name+"]";
           }
         }
       }
@@ -1976,8 +1997,9 @@ function ImportText(){
           if(enam=="OFF")
             enam="THRU";
           for(id in effectlist){
-            if(effectlist[id].name==enam){
-              SetEffect(currentpatch,n,GetEffectFromId(id));
+            var efi=midiif.GetEffectInfo(id);
+            if(efi.ef.name==enam){
+              SetEffect(currentpatch,n,GetEffectFromId(efi.id));
               break;
             }
           }
@@ -1985,7 +2007,8 @@ function ImportText(){
       }
       if(param>=2&&param<11){
         var v=parseInt(tx[l]);
-        var pm=effectlist[id].param[param-2];
+        var efi=midiif.GetEffectInfo(id);
+        var pm=efi.ef.param[param-2];
         if(pm){
           if(typeof(pm.disp)=="number"){
             v-=pm.disp;
