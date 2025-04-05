@@ -298,14 +298,80 @@ function MidiIf(ma){
   this.GetEffectInfo=function(id){
     id=parseInt(id);
     var ef=effectlist[id];
+    switch(this.devid){
+    case 0x58:
+    case 0x61:
+      if(ef){
+        var t=(id>>24)&0xff;
+        if(!(t==0x0c||t==0x0d||t==0x05)) break;
+        for(var i in effectxref){
+          var x=effectxref[i];
+          if(id==x.ms60b){
+            if(this.dump==3)
+              console.log("Matched effectid: 0x"+id.toString(16)+" xeffectid: 0x"+x.b1xon.toString(16));
+            id=x.b1xon;
+            ef=xeffectlist[id];
+            break;
+          }
+        }
+      }
+      else{
+        ef=xeffectlist[id];
+      }
+      break;
+    case 0x5f:
+      if(!ef){
+        var t=(id>>20)&0xfff;
+        if(!(t==0x014||t==0x016||t==0x051)) break;
+        for(var i in effectxref){
+          var x=effectxref[i];
+          if(id==x.b1xon){
+            if(this.dump==3)
+              console.log("Matched xeffectid: 0x"+id.toString(16)+" effectid: 0x"+x.ms60b.toString(16));
+            id=x.ms60b;
+            ef=effectlist[id];
+            break;
+          }
+        }
+      }
+      else{
+        ef=effectlist[id];
+      }
+      break;
+    }
     if(!ef){
       console.log("Not found effectid: 0x"+id.toString(16));
     }
     return {id:id,ef:ef};
   };
   this.ConvertDevPatch=function(devpatch){
-    devpatch.devid=this.devid;
-    return devpatch;
+    if(this.devid==devpatch.devid || (this.devid!=0x5f && devpatch.devid!=0x5f)){
+      devpatch.devid=this.devid;
+      return devpatch;
+    }
+    var patch=new apatch();
+    patch.CopyFrom(devpatch);
+    for(var i=0;i<6;++i){
+      var id=devpatch.GetEffectId(i);
+      if(!id) continue;
+      var efi=this.GetEffectInfo(id);
+      if(efi.ef.group=="AMP"&&((efi.id>>24)&0xff)==0x05){
+        var cabid=devpatch.GetParamVal(i,9);
+        var devampef=effectlist[id];
+        if(devpatch.devid!=0x5f) devampef=xeffectlist[id];
+        for(var ci in devampef.param[7].max){
+          if(devampef.param[7].max[ci]==cabid){
+//            console.log("ConvertDevPatch found cabid: 0x"+cabid.toString(16));
+            cabid=efi.ef.param[7].max[ci];
+            break;
+          }
+        }
+        patch.SetParamVal(i,9,cabid);
+      }
+      patch.SetParamVal(i,1,efi.id);
+    }
+    patch.devid=this.devid;
+    return patch;
   };
   this.StartScan=function(mode,callback){
     if(typeof(mode)=="undefined")
