@@ -649,7 +649,7 @@ function Init(){
           SetParamVal(currentpatch,f-1,p+1,k.target.value);
         DispPatch();
 
-        if(f<=3 && f-1==currenteffect){
+        if(f<=3 && f-1==currenteffect && p+1!=9){ // only for lower 3 effects and when not AMP cab id
           midiif.SendParamChange(f-1,p+1,GetParamVal(currentpatch,f-1,p+1));
         }
         else{
