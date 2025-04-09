@@ -237,7 +237,7 @@ function MidiIf(ma){
     else if(midirecv.indexOf(this.sysexhead+"28")==0){
       var name=MakeName(ev.data);
       if(this.scan>=0){
-        document.getElementById("waitmsg").innerHTML="Scanning Patches...("+this.scan+"/50)";
+        document.getElementById("waitmsg").innerHTML="Scanning Patches...("+(this.scan+1)+"/50)";
         patches[this.scan].ReadBin(ev.data);
         DispPatchName(this.scan);
         for(var ii=0;ii<6;++ii){
@@ -1671,7 +1671,7 @@ function StoreAll(callback){
         this.cb();
       return;
     }
-    document.getElementById("waitmsg").innerHTML="Storing...("+this.cnt+"/50)";
+    document.getElementById("waitmsg").innerHTML="Storing...("+(this.cnt+1)+"/50)";
     midiif.SendDirect([0xc0,this.cnt]);
     midiif.SendDirect(patches[this.cnt].MakeBin(midiif.devid));
     StorePatch(this.cnt++,this.Next.bind(this));
