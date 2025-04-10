@@ -207,21 +207,7 @@ function MidiIf(ma){
       if(this.scan>=0){
         var scanmsg=(this.scanmode=="update"?"Updating":"Scanning");
         document.getElementById("waitmsg").innerHTML=scanmsg+" Patches...("+(this.scan+1)+"/50)";
-        patches[this.scan].ReadBin(ev.data);
-        DispPatchName(this.scan);
-        for(var ii=0;ii<6;++ii){
-          var id=GetEffectId(this.scan,ii);
-          var efi=this.GetEffectInfo(id);
-          if(efi.id && efi.ef){
-            efi.ef.installed=1;
-            var el=document.getElementById("e_"+efi.id);
-            if(el){
-              el.classList.remove("notinstalled");
-              el.classList.add("installed");
-            }
-            inst.ShowEffectIcon(efi.id);
-          }
-        }
+        this.ReceivePatch(this.scan,ev.data);
         ++this.scan;
         if(this.scan>=50){
           this.scan=-1;
@@ -275,22 +261,8 @@ function MidiIf(ma){
         }
       }
       else{
-        patches[currentpatch].ReadBin(ev.data);
-        for(var ii=0;ii<6;++ii){
-          var id=GetEffectId(currentpatch,ii);
-          var efi=this.GetEffectInfo(id);
-          if(efi.id && efi.ef){
-            efi.ef.installed=1;
-            var el=document.getElementById("e_"+efi.id);
-            if(el){
-              el.classList.remove("notinstalled");
-              el.classList.add("installed");
-            }
-            inst.ShowEffectIcon(efi.id);
-          }
-        }
+        this.ReceivePatch(currentpatch,ev.data);
         DispPatch();
-        DispPatchName(currentpatch);
       }
     }
     if(this.waitdata){
@@ -366,6 +338,23 @@ function MidiIf(ma){
       }
     }
     this.que.push(d);
+  };
+  this.ReceivePatch=function(p,data){
+    patches[p].ReadBin(data);
+    for(var ii=0;ii<6;++ii){
+      var id=patches[p].GetEffectId(ii);
+      var efi=this.GetEffectInfo(id);
+      if(efi.id && efi.ef){
+        efi.ef.installed=1;
+        var el=document.getElementById("e_"+efi.id);
+        if(el){
+          el.classList.remove("notinstalled");
+          el.classList.add("installed");
+        }
+        inst.ShowEffectIcon(efi.id);
+      }
+    }
+    DispPatchName(p);
   };
   this.RequestPatch=function(){
     this.Send([0xf0,0x52,0x00,this.devid,0x29,0xf7]);
