@@ -100,7 +100,6 @@ function MidiIf(ma){
   this.callback=null;
   this.ready=0;
   this.pcnt=0;
-  this.workpatch=new apatch();
   this.midiinport=null;
   this.midiaccess.onstatechange=function(ev){
     console.log("StateChange",ev)
@@ -368,19 +367,16 @@ function MidiIf(ma){
     this.Send(patches[currentpatch].MakeBin(this.devid));
   };
   this.SendCurrentPatchVerify=function(callback){
-    var o=[];
-    var len=(midiif.devid==0x5f)?4:6;
-    for(var i=0;i<len;++i){
-      o.push(GetEffectId(currentpatch,i));
-    }
+    var testpatch=new apatch();
+    testpatch.CopyFrom(patches[currentpatch]);
     this.SendCurrentPatch();
     setTimeout(function(){
       this.SendWait([0xf0,0x52,0x00,this.devid,0x29,0xf7],this.sysexhead+"28",function(dat,str){
         var effects={};
-        this.workpatch.ReadBin(dat);
-        for(var j=0;j<len;++j){
-          if(o[j]!=GetEffectId(currentpatch,j)){
-            var efi=this.GetEffectInfo(o[j]);
+        for(var j=0;j<6;++j){
+          var id=testpatch.GetEffectId(j);
+          if(id!=patches[currentpatch].GetEffectId(j)){
+            var efi=this.GetEffectInfo(id);
             var el=document.getElementById("e_"+efi.id);
             if(el){
               el.classList.add("notinstalled");
@@ -657,7 +653,7 @@ function InitCurrentPatchPanel(){
         currenteffect=parseInt(id[1])-1;
         currentparam=parseInt(id[3])-1;
         SetCurrentEffect(currenteffect);
-        midiif.Send(patches[currentpatch].MakeBin(midiif.devid));
+        midiif.SendCurrentPatch();
         UpdateFocus();
         ev.preventDefault();
       };
@@ -1054,7 +1050,7 @@ function PopupPatchPaste(t){
     DispPatchName(t);
     if(t!=currentpatch)
       SelectPatch(t);
-    midiif.Send(patches[currentpatch].MakeBin(midiif.devid));
+    midiif.SendCurrentPatch();
     midiif.RequestPatch();
     if(autosave)
       StorePatch(t);
@@ -1072,7 +1068,7 @@ function PopupPatchDelete(){
       }
     }
     patches[currentpatch].SetEmpty(midiif.devid);
-    midiif.Send(patches[currentpatch].MakeBin(midiif.devid));
+    midiif.SendCurrentPatch();
     midiif.RequestPatch();
     DispPatchName(currentpatch);
     DispPatch();
@@ -1509,8 +1505,8 @@ function InstallChecker(){
       ++this.n;
     }
     this.n=0;
-    midiif.Send(patches[currentpatch].MakeBin(midiif.devid));
-    midiif.Send([0xf0,0x52,0,midiif.devid,0x29,0xf7]);
+    midiif.SendCurrentPatch();
+    midiif.RequestPatch();
     if(this.list.length<=0){
       setTimeout(function(){
         midiif.Send(this.porg.MakeBin(midiif.devid));
