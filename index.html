@@ -92,6 +92,8 @@ function MidiIf(ma){
   this.sysexhead="f0520058";
   this.que=[];
   this.scan=-1;
+  this.scanmode="read";
+  this.scancallback=null;
   this.dump=1;
   this.supress=0;
   this.waitdata=null;
@@ -205,7 +207,8 @@ function MidiIf(ma){
     else if(midirecv.indexOf(this.sysexhead+"28")==0){
       var name=MakeName(ev.data);
       if(this.scan>=0){
-        document.getElementById("waitmsg").innerHTML="Scanning Patches...("+(this.scan+1)+"/50)";
+        var scanmsg=(this.scanmode=="update"?"Updating":"Scanning");
+        document.getElementById("waitmsg").innerHTML=scanmsg+" Patches...("+(this.scan+1)+"/50)";
         patches[this.scan].ReadBin(ev.data);
         DispPatchName(this.scan);
         for(var ii=0;ii<6;++ii){
@@ -224,6 +227,10 @@ function MidiIf(ma){
           SetPatchFocus(1);
           DispPatch();
           document.getElementById("waitbase").style.display="none";
+          if(this.scancallback)
+            this.scancallback();
+          this.scanmode="read";
+          this.scancallback=null;
           ready=true;
           for(i=0;i<6;++i){
             var cell=document.getElementById("fnam"+(i+1));
@@ -259,6 +266,8 @@ function MidiIf(ma){
         }
         else{
           this.que.push([0xc0,this.scan]);
+          if(this.scanmode=="update")
+            this.que.push(patches[this.scan].MakeBin(this.devid));
           this.que.push([0xf0,0x52,0,this.devid,0x29,0xf7]);
         }
       }
@@ -290,13 +299,23 @@ function MidiIf(ma){
     devpatch.devid=this.devid;
     return devpatch;
   };
-  this.StartScan=function(){
-    console.log("StartScan")
+  this.StartScan=function(mode,callback){
+    if(typeof(mode)=="undefined")
+      mode="read";
+    if(!(mode=="read"||mode=="update")){
+      console.log("Invalid scan mode:"+mode);
+      return;
+    }
+    this.scanmode=mode;
+    this.scancallback=callback;
+    console.log("StartScan:"+this.scanmode)
     if(!this.midiout)
       return;
     document.getElementById("waitmsg").innerHTML="";
     document.getElementById("waitbase").style.display="block";
-    this.SendDirect([0xf0,0x7e,0x00,0x06,0x01,0xf7]);
+    if(this.scanmode=="read")
+      this.SendDirect([0xf0,0x7e,0x00,0x06,0x01,0xf7]);
+    this.Send([0xc0,0]);
     setTimeout(function(){
       this.SendDirect([0xf0,0x52,0x00,this.devid,0x50,0xf7]);
       this.scan=0;
@@ -305,6 +324,8 @@ function MidiIf(ma){
           this.norg=currentpatch=dat[1];
           this.que.push([0xf0,0x52,0x00,this.devid,0x50,0xf7]);
           this.que.push([0xc0,this.scan]);
+          if(this.scanmode=="update")
+            this.que.push(patches[currentpatch].MakeBin(this.devid));
           this.que.push([0xf0,0x52,0,this.devid,0x29,0xf7]);
         }.bind(this));
       }.bind(this),100);
@@ -860,7 +881,7 @@ function Init(){
   });
 }
 function Scan(){
-  midiif.StartScan();
+  midiif.StartScan("read");
 }
 function StateChange(){
   console.log("StateChange");
@@ -1585,7 +1606,7 @@ function SaveBank(){
   });
 }
 function StoreAll(callback){
-  document.getElementById("waitmsg").innerHTML="Storing...";
+  document.getElementById("waitmsg").innerHTML="Storing Patches...";
   document.getElementById("waitbase").style.display="block";
   this.res=[];
   this.cnt=0;
@@ -1593,13 +1614,14 @@ function StoreAll(callback){
   this.cb=callback;
   this.Next=function(){
     if(this.cnt>=50){
+      midiif.SendDirect([0xc0,0]);
       document.getElementById("waitbase").style.display="none";
       this.ready=1;
       if(this.cb)
         this.cb();
       return;
     }
-    document.getElementById("waitmsg").innerHTML="Storing...("+(this.cnt+1)+"/50)";
+    document.getElementById("waitmsg").innerHTML="Storing Patches...("+(this.cnt+1)+"/50)";
     midiif.SendDirect([0xc0,this.cnt]);
     midiif.SendDirect(patches[this.cnt].MakeBin(midiif.devid));
     StorePatch(this.cnt++,this.Next.bind(this));
