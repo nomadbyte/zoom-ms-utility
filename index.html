@@ -371,7 +371,7 @@ function MidiIf(ma){
     this.SendCurrentPatch();
     setTimeout(function(){
       this.SendWait([0xf0,0x52,0x00,this.devid,0x29,0xf7],this.sysexhead+"28",function(dat,str){
-        var s="";
+        var effects={};
         this.workpatch.ReadBin(dat);
         for(var j=0;j<len;++j){
           if(o[j]!=GetEffectId(currentpatch,j)){
@@ -380,12 +380,17 @@ function MidiIf(ma){
               el.classList.add("notinstall");
               if(effectlist[o[j]].install==0)
                 effectlist[o[j]].install=-1;
-              s+="["+effectlist[o[j]].name+"]";
+              effects[o[j]]="["+effectlist[o[j]].name+"]";
             }
           }
         }
-        if(callback)
+        if(callback){
+          var s="";
+          var ids=Object.keys(effects).sort(function(a,b){return a-b;});
+          for(var i in ids)
+            s+=effects[ids[i]];
           callback(s.length?s:null);
+        }
       })
     }.bind(this),200);
   };
@@ -1635,7 +1640,7 @@ function StoreAllVerify(){
     this.savedpatches[n].CopyFrom(patches[n]);
   }
   midiif.StartScan("update",function(){
-    var s="";
+    var effects={};
     for(var n=0;n<50;++n){
       var savedpatch=this.savedpatches[n];
       var receivedpatch=patches[n];
@@ -1648,11 +1653,15 @@ function StoreAllVerify(){
             el.classList.add("notinstall");
             if(ef.install==0)
               ef.install=-1;
-            s+="["+ef.name+"]";
+            effects[id]="["+ef.name+"]";
           }
         }
       }
     }
+    var s="";
+    var ids=Object.keys(effects).sort(function(a,b){return a-b;});
+    for(var i in ids)
+      s+=effects[ids[i]];
     if(s.length){
       AlertMsg("The following effect(s) are not installed:<br/>"+s);
       console.log("Not installed:"+s);
