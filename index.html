@@ -57,6 +57,8 @@ var inst=null;
 var currentpatch=-1;
 var currenteffect=0;
 var currentparam=0;
+var currentbpmsel=false;
+var bpmparam={name:"BPM",def:119,max:254,disp:1};
 var timer,timerprg;
 var dragtarget=null;
 var ready=false;
@@ -659,6 +661,29 @@ function Init(){
   SetupKeyboardActions();
 }
 function InitCurrentPatchPanel(){
+  var bpmp=document.getElementById("bpmp");
+  if(bpmp){
+    var c=bpmp.id;
+    var k=document.getElementById(c+"k");
+    var v=document.getElementById(c+"v");
+    var p=bpmp;
+    p.onclick=p.oncontextmenu=function(ev){
+      currentbpmsel=true;
+      currentparam=0;
+      UpdateFocus();
+      ev.preventDefault();
+    };
+    k.valuetip=0;
+    k.oninput=function(k){
+      SetBpmVal(currentpatch,k.target.value);
+      DispPatch();
+      midiif.SendCurrentPatch();
+      dirty=1;
+    };
+    v.ondblclick=function(ev){
+      PopupEditBpm(bpmparam);
+    }
+  }
   for(i=0;i<6;++i){
     var ef=document.getElementById("fnam"+(i+1));
     var im=document.getElementById("fimg"+(i+1));
@@ -739,6 +764,7 @@ function InitCurrentPatchPanel(){
           id=ev.target.parentNode.parentNode.id;
         currenteffect=parseInt(id[1])-1;
         currentparam=parseInt(id[3])-1;
+        currentbpmsel=false;
         SetCurrentEffect(currenteffect);
         midiif.SendCurrentPatch();
         UpdateFocus();
@@ -894,8 +920,8 @@ function SetupKeyboardActions(){
       if(ev.ctrlKey||ev.altKey)
         return;
       if(ev.key=="ArrowUp"||ev.key=="ArrowDown"||ev.key=="PageUp"||ev.key=="PageDown"){
-        if(currenteffect>=0&&currentparam>=0){
-          var i="f"+(currenteffect+1)+"p"+(currentparam+1);
+        if(currentbpmsel||(currenteffect>=0&&currentparam>=0)){
+          var i=(currentbpmsel?"bpmp":"f"+(currenteffect+1)+"p"+(currentparam+1));
           var k=document.getElementById(i+"k");
           var s=document.getElementById(i+"s");
           if(k){
@@ -1274,6 +1300,49 @@ function PopupEdit(f,p,par){
     panel.style.display="none";
   };
 }
+function PopupEditBpm(par){
+  var tar=document.getElementById("bpmp");
+  var rc=tar.getBoundingClientRect();
+  var offs;
+  var panel=document.getElementById("popupeditpanel");
+  var top=(377+(-1)*42);
+  var left=190+0*96;
+  panel.onclick=(ev)=>{
+    ev.stopPropagation();
+  }
+  switch(typeof(par.disp)){
+  case "number": offs=par.disp; break;
+  }
+  panel.innerHTML=`<div>Range : ${offs} .. ${offs+par.max}</div><input value="${GetBpmVal(currentpatch)-1+offs}"/>`;
+  panel.style.top=top+"px";
+  panel.style.left=left+"px";
+  panel.style.display="block";
+  PopupPatchCancel2();
+  var input=panel.childNodes[1];
+  input.focus();
+  input.selectionStart=input.selectionEnd=100;
+  input.onkeydown=(ev)=>{
+    console.log(ev.key);
+    switch(ev.key){
+    case "Enter":
+      var val=input.value;
+      if(val<offs) val=offs;
+      if(val>=par.max+offs) val=par.max+offs;
+      val-=offs;
+      if(isNaN(val)) val=0;
+      SetBpmVal(currentpatch,val+1);
+      panel.style.display="none";
+      DispPatch(currentpatch);
+      break;
+    case "Escape":
+      panel.style.display="none";
+      break;
+    }
+  }
+  input.onblur=()=>{
+    panel.style.display="none";
+  };
+}
 function PopupPatchRename(){
   document.getElementById("inputtext").value=patches[currentpatch].name;
   var tar=document.getElementById((currentpatch+1)+"nam");
@@ -1318,11 +1387,29 @@ function SetParamVal(p,n,param,val){
     return 0;
   pat.SetParamVal(n,param,val);
 }
+function GetBpmVal(p){
+  var pat=patches[p];
+  if(!pat)
+    return 0;
+  return pat.GetBpm();
+}
+function SetBpmVal(p,val){
+  var pat=patches[p];
+  if(!pat)
+    return 0;
+  pat.SetBpm(val);
+}
+function GetCurrentEffect(){
+  var pat=patches[currentpatch];
+  if(!pat)
+    return 0;
+  return pat.GetCurFx();
+}
 function SetCurrentEffect(n){
   var pat=patches[currentpatch];
   if(!pat)
     return 0;
-  pat.curfx=n;
+  pat.SetCurFx(n);
 }
 function GetEffectFromId(id){
   var ef=[];
@@ -1399,10 +1486,29 @@ function DispPatchName(p){
 }
 function DispPatch(patch){
   var efmax,n,p,cell;
+  var bpmp=document.getElementById("bpmp");
   var dspgraph=document.getElementById("dspgraph");
   var tab=document.getElementById("effects");
   if(typeof(patch)=="undefined")
     patch=currentpatch;
+  if(bpmp){
+    var param=bpmparam;
+    var s=bpmp.id;
+    var el=document.getElementById(s+"l");
+    var ek=document.getElementById(s+"k");
+    var ev=document.getElementById(s+"v");
+    el.innerHTML=param.name;
+    ek.style.display="block";
+    var v=GetBpmVal(patch)-1;
+    var ds=param.disp;
+    ev.innerHTML=v+ds;
+    ek.max=param.max;
+    ek.tab=null;
+    ek.defvalue=param.def;
+    if(ek.setValue)
+      ek.setValue(v);
+  }
+  currenteffect=GetCurrentEffect();
   efmax=(midiif.devid==0x5f)?4:6;
   dspgraph.style.height=42*efmax+"px";
   var dspsum=0;
@@ -1522,6 +1628,7 @@ function DispPatch(patch){
       }
     }
   }
+  UpdateFocus();
 }
 function SelectPatch(p){
   p=parseInt(p);
@@ -1532,6 +1639,8 @@ function SelectPatch(p){
   midiif.Send([0xc0,p]);
   SetPatchFocus(0);
   currentpatch=p;
+  currentbpmsel=false;
+  currentparam=0;
   SetPatchFocus(1);
   DispPatch();
 }
@@ -2416,7 +2525,7 @@ img{
 }
 #patchesbase{
   position:absolute;
-  left:280px;
+  left:288px;
   top:90px;
   width:800px;
   background:linear-gradient(#a0b0d0,#9caccc);
@@ -2426,7 +2535,7 @@ img{
   border-bottom:5px solid #fff;
   border-radius: 5px;
   box-shadow:14px 14px 14px 14px rgba(0,0,0,0.05) inset;
-  padding:5px 10px;
+  padding:5px 5px;
   margin:0px 15px 0px auto;
 }
 #patches{
@@ -2493,6 +2602,25 @@ img{
 }
 #patches div.drag{
   opacity: 0.5;
+}
+#bpmp{
+  position: absolute;
+  top: 295px;
+  left: 186px;
+  width: 100px;
+  background:url(./images/bg-grad.png);
+}
+#bpmp div .param{
+  display:none;
+  background:#446;
+  color:#ffd;
+  width:55px;
+  height:20px;
+  margin:2px 0px 0px 0px;
+  text-align: center;
+  font-size:13px;
+  font-weight:normal;
+  border-radius:3px;
 }
 #dspgraph{
   position:absolute;
@@ -2606,7 +2734,7 @@ img{
   box-sizing: border-box;
 }
 .pfocus{
-  border:1px solid #c88;
+  border:1px solid #c33;
 }
 input{
   width:45%;
@@ -2910,6 +3038,7 @@ webaudio-switch{
         </tr>
       </table>
     </div>
+    <div class="pcell" id="bpmp"><webaudio-knob id="bpmpk" diameter="32" src="./images/ms50gknob.png" sprites="100" style="height: 32px; display: block;"></webaudio-knob><div><div id="bpmpv" class="param" style="display: block;"></div><div id="bpmpl">BPM</div></div></div>
     <div id="dspgraph"><div></div><div></div><div></div><div></div><div></div><div></div></div>
 <!--    <canvas id="dspgraph" width="20" height="200"></canvas>-->
     <table id="effects">

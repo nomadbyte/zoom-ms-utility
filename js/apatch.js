@@ -163,6 +163,18 @@ apatch.prototype.GetEffectState=function(n){
 apatch.prototype.GetDspState=function(n){
   return (this.dspstate>>n)&1;
 }
+apatch.prototype.GetCurFx=function(){
+  return this.curfx;
+};
+apatch.prototype.SetCurFx=function(v){
+ this.curfx=Math.max(0,Math.min(5,v)); // should be limited by maxfx, but no guarantee it was already updated
+};
+apatch.prototype.GetBpm=function(){
+  return this.bpm;
+};
+apatch.prototype.SetBpm=function(v){
+ this.bpm=Math.max(1,Math.min(255,v));
+};
 apatch.prototype.GetCurFxBit=function(dat){
   var bits=(dat.length<146?this.curfxbits[0]:this.curfxbits[1]);
   var val=(dat.length<146?4:6)-this.GetBits(dat,bits)-1
