@@ -150,6 +150,8 @@ function MidiIf(ma){
       if(currentpatch!=ev.data[1] && this.scan<0){
         SetPatchFocus(0);
         currentpatch=ev.data[1];
+        currentparam=0;
+        currentbpmsel=false;
         DispPatch();
         SetPatchFocus(1);
       }
@@ -235,6 +237,8 @@ function MidiIf(ma){
           this.scan=-1;
           this.ready=1;
           midiif.Send([0xc0,currentpatch]);
+          currentparam=0;
+          currentbpmsel=false;
           SetPatchFocus(1);
           DispPatch();
           document.getElementById("waitbase").style.display="none";
@@ -248,8 +252,10 @@ function MidiIf(ma){
             var cell2=document.getElementById("fnum"+(i+1));
             cell.oncontextmenu=function(ev){
               currenteffect=parseInt(ev.target.id[4])-1;
+              currentparam=0;
               SetCurrentEffect(currenteffect);
               midiif.SendCurrentPatch();
+              UpdateFocus();
               PopupEffectMenu(ev.target);
               ev.preventDefault();
             };
@@ -259,6 +265,7 @@ function MidiIf(ma){
             };
             cell.onclick=function(ev){
               currenteffect=parseInt(ev.target.id[4])-1;
+              currentparam=0;
               SetCurrentEffect(currenteffect);
               ToggleEffect(currenteffect);
               UpdateFocus();
@@ -267,9 +274,11 @@ function MidiIf(ma){
             };
             cell2.onclick=cell2.oncontextmenu=function(ev){
               currenteffect=parseInt(ev.target.id[4])-1;
+              currentparam=0;
               PopupEffectMenu(ev.target);
               SetCurrentEffect(currenteffect);
               midiif.SendCurrentPatch();
+              UpdateFocus();
               ev.stopPropagation();
               ev.preventDefault();
             };
@@ -387,6 +396,7 @@ function MidiIf(ma){
     console.log("StartScan:"+this.scanmode)
     if(!this.midioutport)
       return;
+    if(currentpatch>0) SelectPatch(0);
     document.getElementById("waitmsg").innerHTML="";
     document.getElementById("waitbase").style.display="block";
     if(this.scanmode=="read")
@@ -726,26 +736,22 @@ function InitCurrentPatchPanel(){
           var s=parseInt(event.dataTransfer.getData("text")[4])-1;
           var d=parseInt(ev.target.id[4])-1;
           if(s!=d){
+            var e=GetEffect(currentpatch,s);
             if(s>d){
-              var e=GetEffect(currentpatch,s);
               for(var i=s;i>d;--i)
                 SetEffect(currentpatch,i,GetEffect(currentpatch,i-1));
-              SetEffect(currentpatch,d,e);
-              SetCurrentEffect(d);
-              DispPatchName(currentpatch);
-              midiif.SendCurrentPatch();
-              dirty=1;
             }
             else{
-              var e=GetEffect(currentpatch,s);
               for(var i=s;i<d;++i)
                 SetEffect(currentpatch,i,GetEffect(currentpatch,i+1));
-              SetEffect(currentpatch,d,e);
-              SetCurrentEffect(d);
-              DispPatchName(currentpatch);
-              midiif.SendCurrentPatch();
-              dirty=1;
             }
+            SetEffect(currentpatch,d,e);
+            currenteffect=d;
+            SetCurrentEffect(currenteffect);
+            DispPatchName(currentpatch);
+            UpdateFocus();
+            midiif.SendCurrentPatch();
+            dirty=1;
           }
           ev.preventDefault();
         };
@@ -776,21 +782,19 @@ function InitCurrentPatchPanel(){
       k.oninput=function(k){
         var f=parseInt(k.target.id[1]);
         var p=parseInt(k.target.id[3]);
-        SetCurrentEffect(f-1);
-        if(k.target.tab){
-          var v=k.target.tab[k.target.value|0];
-          SetParamVal(currentpatch,f-1,p+1,v);
-        }
-        else
-          SetParamVal(currentpatch,f-1,p+1,k.target.value);
+        currenteffect=f-1;
+        currentparam=p-1;
+        SetCurrentEffect(currenteffect);
+        var val=k.target.value;
+        if(k.target.tab) val=k.target.tab[val|0];
+        SetParamVal(currentpatch,currenteffect,currentparam+2,val);
         DispPatch();
 
-        if(f<=3 && f-1==currenteffect && p+1!=9){ // only for lower 3 effects and when not AMP cab id
-          midiif.SendParamChange(f-1,p+1,GetParamVal(currentpatch,f-1,p+1));
+        if(currenteffect<3 && (currentparam+2)!=9){ // only for lower 3 effects and when not AMP cab id
+          midiif.SendParamChange(currenteffect,currentparam+2,GetParamVal(currentpatch,currenteffect,currentparam+2));
         }
         else{
           midiif.SendCurrentPatch();
-          currenteffect=f-1;
           dirty=1;
         }
       };
@@ -798,8 +802,11 @@ function InitCurrentPatchPanel(){
         s.onchange=function(s){
           var f=parseInt(s.target.id[1]);
           var p=parseInt(s.target.id[3]);
-          SetCurrentEffect(f-1);
-          SetParamVal(currentpatch,f-1,p+1,s.target.value);
+          var val=s.target.value;
+          currenteffect=f-1;
+          currentparam=p-1;
+          SetCurrentEffect(currenteffect);
+          SetParamVal(currentpatch,currenteffect,currentparam+2,val);
           DispPatch();
           midiif.SendCurrentPatch();
           dirty=1;
@@ -809,15 +816,17 @@ function InitCurrentPatchPanel(){
       v.ondblclick=function(ev){
         var f=parseInt(ev.target.id[1]);
         var p=parseInt(ev.target.id[3]);
-        var id=GetEffectId(currentpatch,f-1);
+        currenteffect=f-1;
+        currentparam=p-1;
+        var id=patches[currentpatch].GetEffectId(currenteffect);
         var efi=midiif.GetEffectInfo(id);
-        var par=efi.ef.param[p-1];
+        var par=efi.ef.param[currentparam];
         PopupEdit(f,p,par);
       }
-
     }
   }
 }
+
 function InitPatchListPanel(){
   for(i=0;i<50;++i){
     for(var ii=0;ii<6;++ii){
@@ -992,11 +1001,19 @@ function StateChange(){
   console.log("StateChange");
 }
 function UpdateFocus(){
+  var bpmp=document.getElementById("bpmp");
+  if(bpmp){
+    var cell=bpmp;
+    if(currentbpmsel)
+      cell.classList.add("pfocus");
+    else
+      cell.classList.remove("pfocus");
+  }
   var tab=document.getElementById("effects");
   for(f=0;f<6;++f){
     for(p=0;p<9;++p){
       var cell=tab.rows[f].cells[p+2].childNodes[0];
-      if(f==currenteffect&&p==currentparam)
+      if(f==currenteffect&&p==currentparam&&!currentbpmsel)
         cell.classList.add("pfocus");
       else
         cell.classList.remove("pfocus");
