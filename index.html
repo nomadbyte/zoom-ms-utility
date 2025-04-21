@@ -790,13 +790,11 @@ function InitCurrentPatchPanel(){
         SetParamVal(currentpatch,currenteffect,currentparam+2,val);
         DispPatch();
 
-        if(currenteffect<3 && (currentparam+2)!=9){ // only for lower 3 effects and when not AMP cab id
-          midiif.SendParamChange(currenteffect,currentparam+2,GetParamVal(currentpatch,currenteffect,currentparam+2));
-        }
-        else{
-          midiif.SendCurrentPatch();
-          dirty=1;
-        }
+        // for usage consistency, on param value change send the whole patch;
+        // individual param change SysEx works only for the lower 3 effects and
+        // needs an explicit store
+        midiif.SendCurrentPatch();
+        dirty=1;
       };
       if(s){
         s.onchange=function(s){
