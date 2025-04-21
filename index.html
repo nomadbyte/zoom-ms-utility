@@ -765,8 +765,10 @@ function InitCurrentPatchPanel(){
         currenteffect=parseInt(id[1])-1;
         currentparam=parseInt(id[3])-1;
         currentbpmsel=false;
-        SetCurrentEffect(currenteffect);
-        midiif.SendCurrentPatch();
+        if(currenteffect!=GetCurrentEffect()){
+          SetCurrentEffect(currenteffect);
+          midiif.SendCurrentPatch();
+        }
         UpdateFocus();
         ev.preventDefault();
       };
@@ -1195,6 +1197,9 @@ function PopupPatchDelete(){
 }
 function PopupEdit(f,p,par){
   var tar=document.getElementById("f"+f+"p"+p+"v");
+  var elk=document.getElementById("f"+f+"p"+p+"k");
+  var els=document.getElementById("f"+f+"p"+p+"s");
+  if(els.style.display=="none") els=null; // either knob or switch
   var rc=tar.getBoundingClientRect();
   var offs;
   var panel=document.getElementById("popupeditpanel");
@@ -1219,9 +1224,17 @@ function PopupEdit(f,p,par){
       for(let i=0;i<par.disp.length;++i){
         var e=panel.childNodes[0].childNodes[i*2];
         e.onclick=()=>{
-          SetParamVal(currentpatch,f-1,p+1,(typeof(par.max)=="object"?par.max[i]:i));
+          var val=(typeof(par.max)=="object"?par.max[i]:i);
+          var isupd=(val!=GetParamVal(currentpatch,f-1,p+1));
+          SetParamVal(currentpatch,f-1,p+1,val);
           DispPatch(currentpatch);
           panel.style.display="none";
+          if(isupd){
+            if(els)
+              els.sendEvent("change");
+            else
+              elk.sendEvent("input");
+          }
         };
       }
     }
@@ -1238,10 +1251,17 @@ function PopupEdit(f,p,par){
       for(let i=0;i<par.disp.list.length;++i){
         var e=panel.childNodes[0].childNodes[(i+1)*2+1];
         e.onclick=()=>{
-          console.log(par.disp.max+i)
-          SetParamVal(currentpatch,f-1,p+1,par.disp.max+i-par.disp.min);
+          var val=par.disp.max+i-par.disp.min;
+          var isupd=(val!=GetParamVal(currentpatch,f-1,p+1));
+          SetParamVal(currentpatch,f-1,p+1,val);
           DispPatch(currentpatch);
           panel.style.display="none";
+          if(isupd){
+            if(els)
+              els.sendEvent("change");
+            else
+              elk.sendEvent("input");
+          }
         };
       }
       var input=panel.childNodes[0].childNodes[1];
@@ -1256,9 +1276,16 @@ function PopupEdit(f,p,par){
           if(val>=par.max+par.disp.min) val=par.max+par.disp.min;
           val-=par.disp.min;
           if(isNaN(val)) val=0;
+          var isupd=(val!=GetParamVal(currentpatch,f-1,p+1));
           SetParamVal(currentpatch,f-1,p+1,val);
           panel.style.display="none";
           DispPatch(currentpatch);
+          if(isupd){
+            if(els)
+              els.sendEvent("change");
+            else
+              elk.sendEvent("input");
+          }
           break;
         case "Escape":
           panel.style.display="none";
@@ -1287,9 +1314,16 @@ function PopupEdit(f,p,par){
       if(val>=par.max+offs) val=par.max+offs;
       val-=offs;
       if(isNaN(val)) val=0;
+      var isupd=(val!=GetParamVal(currentpatch,f-1,p+1));
       SetParamVal(currentpatch,f-1,p+1,val);
       panel.style.display="none";
       DispPatch(currentpatch);
+      if(isupd){
+        if(els)
+          els.sendEvent("change");
+        else
+          elk.sendEvent("input");
+      }
       break;
     case "Escape":
       panel.style.display="none";
@@ -1302,6 +1336,9 @@ function PopupEdit(f,p,par){
 }
 function PopupEditBpm(par){
   var tar=document.getElementById("bpmp");
+  var elk=document.getElementById("f"+f+"p"+p+"k");
+  var els=document.getElementById("f"+f+"p"+p+"s");
+  if(els.style.display=="none") els=null; // either knob or switch
   var rc=tar.getBoundingClientRect();
   var offs;
   var panel=document.getElementById("popupeditpanel");
@@ -1330,9 +1367,16 @@ function PopupEditBpm(par){
       if(val>=par.max+offs) val=par.max+offs;
       val-=offs;
       if(isNaN(val)) val=0;
+      var isupd=((val+1)!=GetBpmVal(currentpatch));
       SetBpmVal(currentpatch,val+1);
       panel.style.display="none";
       DispPatch(currentpatch);
+      if(isupd){
+        if(els)
+          els.sendEvent("change");
+        else
+          elk.sendEvent("input");
+      }
       break;
     case "Escape":
       panel.style.display="none";
