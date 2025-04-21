@@ -483,6 +483,20 @@ function MidiIf(ma){
                 efi.ef.installed=-1;
               effects[efi.id]="["+efi.ef.name+"]";
             }
+            continue;
+          }
+          var efgrpid=((id>>24)&0xff);
+          var isamp=(efgrpid==0x04||efgrpid==0x05);
+          var cabid=(isamp?testpatch.GetParamVal(j,9):null);
+          if(cabid&&cabid!=id&&cabid!=patches[currentpatch].GetParamVal(j,9)){
+            var efi=this.GetEffectInfo(cabid);
+            var el=document.getElementById("e_"+efi.id);
+            if(el){
+              el.classList.add("notinstalled");
+              if(efi.ef.installed==0)
+                efi.ef.installed=-1;
+              effects[efi.id]="["+efi.ef.name+"]";
+            }
           }
         }
         if(callback){
@@ -789,11 +803,23 @@ function InitCurrentPatchPanel(){
         if(k.target.tab) val=k.target.tab[val|0];
         SetParamVal(currentpatch,currenteffect,currentparam+2,val);
         DispPatch();
-
         // for usage consistency, on param value change send the whole patch;
         // individual param change SysEx works only for the lower 3 effects and
         // needs an explicit store
-        midiif.SendCurrentPatch();
+        var id=GetEffectId(currentpatch,currenteffect);
+        var efgrpid=((id>>24)&0xff);
+        var isamp=(efgrpid==0x04||efgrpid==0x05);
+        if(isamp&&(currentparam+2)==9){ // cabid changed, verify that corresp. AMP is installed
+          midiif.SendCurrentPatchVerify(function(s){
+            if(s){
+              AlertMsg("The following effect(s) are not installed:<br/>"+s);
+              console.log("Not installed:"+s);
+            }
+          });
+        }
+        else{
+          midiif.SendCurrentPatch();
+        }
         dirty=1;
       };
       if(s){
@@ -1964,6 +1990,20 @@ function StoreAllVerify(){
         var id=savedpatch.GetEffectId(j);
         if(id!=receivedpatch.GetEffectId(j)){
           var efi=midiif.GetEffectInfo(id);
+          var el=document.getElementById("e_"+efi.id);
+          if(el){
+            el.classList.add("notinstalled");
+            if(efi.ef.installed==0)
+              efi.ef.installed=-1;
+            effects[efi.id]="["+efi.ef.name+"]";
+          }
+          continue;
+        }
+        var efgrpid=((id>>24)&0xff);
+        var isamp=(efgrpid==0x04||efgrpid==0x05);
+        var cabid=(isamp?savedpatch.GetParamVal(j,9):null);
+        if(cabid&&cabid!=id&&cabid!=receivedpatch.GetParamVal(j,9)){
+          var efi=midiif.GetEffectInfo(cabid);
           var el=document.getElementById("e_"+efi.id);
           if(el){
             el.classList.add("notinstalled");
