@@ -1766,8 +1766,8 @@ function InstallChecker(){
     this.n=0;
     for(var id in effectlist){
       var efi=midiif.GetEffectInfo(id);
-      if(efi.ef.installed==0){
-        efi.ef.installed=-1;
+      if(efi.ef.installed<=0){
+        if(efi.ef.installed==0) efi.ef.installed=-1;
         document.getElementById("e_"+efi.id).classList.add("notinstalled");
         this.list.push(parseInt(efi.id));
       }
